@@ -16,7 +16,7 @@ game-client
 │   ├── player.png
 │   └── background.png
 ├── bundlers
-│   └── 
+│   └── vite config ?
 ├── src
 │   ├── index.js
 │   ├── index.html
@@ -25,13 +25,7 @@ game-client
 │   ├── player.js
 │   ├── scene.js
 │   └── socket.js
-├── node_modules
-│   ├── phaser
-│   │   └── dist
-│   │       └── phaser.js
-│   ├── socket.io-client
-│   │   └── dist
-│   │       └── socket.io.js
+├── node_modules/
 ├── package.json
 
 game-server
@@ -39,4 +33,5 @@ game-server
 │   ├── server.js
 │   └── server_config
 
+```
 
