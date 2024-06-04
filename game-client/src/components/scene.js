@@ -5,7 +5,7 @@ import { Player } from './player.js';
 let scene, camera, renderer;
 let plane;
 const balls = {};
-let userBall;
+let userDude;
 
 export function initScene() {
     scene = new THREE.Scene();
@@ -27,7 +27,7 @@ export function initScene() {
     scene.add(plane);
 
     // Create a player ball
-    createUserBall();
+    createUserDude();
 
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -38,11 +38,14 @@ export function initScene() {
     window.addEventListener('resize', onWindowResize, false);
 }
 
-function createUserBall() {
+function createUserDude() {
     console.log('Creating local user ball');
-    userBall = new Player(0xff0000, true); // Red ball for the local user with controls enabled
-    scene.add(userBall.mesh);
-    balls['user'] = userBall;
+    userDude = new Player(
+        scene,
+        '/models/dude.glb', // Model path
+        true // Local user with controls enabled
+    );
+    balls['user'] = userDude;
 }
 
 function onWindowResize() {
@@ -51,16 +54,19 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-export function createBallForUser(id, position) {
-    const newBall = new Player(0x0000ff, false); // Blue ball for other users without controls
-    newBall.setPosition(position.x, position.y, position.z);
-    scene.add(newBall.mesh);
-    balls[id] = newBall;
+export function createDudeForUser(id, position) {
+    const newDude = new Player(
+        scene,
+        '/models/dude.glb', // Model path
+        false // Non-local user
+    );
+    newDude.setPosition(position.x, position.y, position.z);
+    balls[id] = newDude;
 }
 
-export function updateBallPositionById(id, position) {
+export function updateDudePositionById(id, position) {
     if (!balls[id]) {
-        createBallForUser(id, position);
+        createDudeForUser(id, position);
     } else {
         balls[id].setPosition(position.x, position.y, position.z);
     }

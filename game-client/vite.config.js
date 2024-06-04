@@ -1,9 +1,9 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
     root: 'src', // Set the root directory for the project
+    publicDir: path.resolve(__dirname, 'public'), // Serve static files from the public directory
     build: {
         outDir: '../dist', // Output directory for the build
     },

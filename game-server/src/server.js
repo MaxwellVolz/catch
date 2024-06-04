@@ -8,16 +8,18 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 let clients = [];
+let userCounter = 1;
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
-    const userId = `User${clients.length + 1}`;
+    const userId = `User${userCounter++}`;
     const user = { id: userId, socket: ws, position: { x: 0, y: 0, z: 0 } };
     clients.push(user);
 
     // Send initial lobby state and positions to the new client
     ws.send(JSON.stringify({
         type: 'init',
+        userId, // Send userId to the client
         users: clients.map(client => ({ id: client.id, position: client.position }))
     }));
 
@@ -36,6 +38,12 @@ wss.on('connection', (ws) => {
         console.log(`Received from ${userId}:`, message);
 
         if (data.type === 'updatePosition') {
+            // Validate the user sending the update
+            if (data.id !== userId) {
+                console.log(`Invalid update attempt by ${userId}`);
+                return;
+            }
+
             // Update user's position
             user.position = data.position;
 

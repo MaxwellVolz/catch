@@ -1,5 +1,5 @@
 // src/components/socket.js
-import { updateBallPositionById, createBallForUser } from './scene.js';
+import { updateDudePositionById, createDudeForUser } from './scene.js';
 
 const SOCKET_URL = 'ws://localhost:3000';
 let socket;
@@ -18,17 +18,17 @@ export function connectWebSocket() {
             console.log('Initial users and positions:', data.users);
             userId = data.userId; // Store the assigned user ID
             data.users.forEach(user => {
-                updateBallPositionById(user.id, user.position);
+                updateDudePositionById(user.id, user.position);
             });
         } else if (data.type === 'lobby') {
             console.log('Current users in the lobby:', data.users);
         } else if (data.type === 'message') {
             console.log(`Message from ${data.from}: ${data.content}`);
         } else if (data.type === 'updatePosition') {
-            updateBallPositionById(data.id, data.position);
+            updateDudePositionById(data.id, data.position);
         } else if (data.type === 'newUser') {
             console.log(`New user joined: ${data.user.id}`);
-            createBallForUser(data.user.id, data.user.position);
+            createDudeForUser(data.user.id, data.user.position);
         }
     });
 
@@ -41,7 +41,7 @@ export function connectWebSocket() {
     });
 }
 
-export function updateBallPosition(position) {
+export function updateDudePosition(position) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         console.log("Sending")
         console.log(JSON.stringify({ type: 'updatePosition', id: userId, position }))
