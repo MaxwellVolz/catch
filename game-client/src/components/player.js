@@ -38,9 +38,7 @@ export class Player {
                     const action = this.mixer.clipAction(clip);
                     this.actions[clip.name] = action;
                     console.log(`Loaded animation: ${clip.name}`);
-                    if (clip.name === 'Idle') {
-                        this.setAction('Idle');
-                    }
+                    this.setAction('Idle');
                 });
 
                 this.scene.add(this.mesh); // Add the model to the scene
@@ -70,42 +68,57 @@ export class Player {
     updateMovement() {
         requestAnimationFrame(() => this.updateMovement());
 
+        if (!this.mesh) return; // Ensure mesh is defined
+
         this.velocity.set(0, 0, 0);
         let moving = false;
+        let action = 'Idle';
 
         if (this.keys['w']) {
-            this.velocity.z -= this.speed;
+            this.velocity.z -= 1;
             moving = true;
+            action = 'Run';
         }
         if (this.keys['s']) {
-            this.velocity.z += this.speed;
+            this.velocity.z += 1;
             moving = true;
+            action = 'Run';
         }
         if (this.keys['a']) {
-            this.velocity.x -= this.speed;
+            this.velocity.x -= 1;
             moving = true;
+            action = 'Run';
         }
         if (this.keys['d']) {
-            this.velocity.x += this.speed;
+            this.velocity.x += 1;
             moving = true;
-        }
-
-        if (this.velocity.length() > 0) {
-            this.mesh.position.add(this.velocity);
-            updateDudePosition(this.mesh.position);
+            action = 'Run';
         }
 
         if (moving) {
-            this.setAction('Running');
+            this.velocity.normalize().multiplyScalar(this.speed);
+            this.mesh.position.add(this.velocity);
+
+            // Calculate the new direction the mesh should face
+            const angle = Math.atan2(this.velocity.x, this.velocity.z);
+            this.mesh.rotation.y = angle;
+
+            updateDudePosition(this.mesh.position, this.mesh.rotation.y, action); // Send position, rotation, and action to the server
         } else {
-            this.setAction('Idle');
+            action = 'Idle';
+            updateDudePosition(this.mesh.position, this.mesh.rotation.y, action); // Send position, rotation, and action to the server
         }
+
+        this.setAction(action);
 
         if (this.mixer) this.mixer.update(this.speed);
     }
 
+
     setAction(name) {
-        if (this.currentAction === this.actions[name]) return;
+        if (this.currentAction === this.actions[name]) {
+            return;
+        }
         if (this.currentAction) this.currentAction.fadeOut(0.5);
         this.currentAction = this.actions[name];
         if (this.currentAction) this.currentAction.reset().fadeIn(0.5).play();
@@ -116,7 +129,15 @@ export class Player {
         if (this.mesh) this.mesh.position.set(x, y, z);
     }
 
+    setRotation(y) {
+        if (this.mesh) this.mesh.rotation.y = y;
+    }
+
     getPosition() {
         return this.mesh ? this.mesh.position : new THREE.Vector3();
+    }
+
+    getRotation() {
+        return this.mesh ? this.mesh.rotation.y : 0;
     }
 }

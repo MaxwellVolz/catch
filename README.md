@@ -12,6 +12,7 @@
     - [Setup](#setup-1)
     - [Dev](#dev-1)
     - [Prod](#prod-1)
+  - [Model Creation](#model-creation)
 
 
 ## Project Overview
@@ -110,4 +111,12 @@ npm run dev
 ```sh
 npm run start
 ```
+
+## Model Creation
+
+Mixamo -> Blender -> .glb
+
+[ref](https://www.donmccurdy.com/2017/11/06/creating-animated-gltf-characters-with-mixamo-and-blender/)
+
+
 

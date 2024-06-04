@@ -1,10 +1,9 @@
-// src/components/scene.js
 import * as THREE from 'three';
 import { Player } from './player.js';
 
 let scene, camera, renderer;
 let plane;
-const balls = {};
+const dudes = {};
 let userDude;
 
 export function initScene() {
@@ -45,7 +44,7 @@ function createUserDude() {
         '/models/dude.glb', // Model path
         true // Local user with controls enabled
     );
-    balls['user'] = userDude;
+    dudes['user'] = userDude;
 }
 
 function onWindowResize() {
@@ -54,21 +53,39 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-export function createDudeForUser(id, position) {
+export function createDudeForUser(id, position, rotation, action = 'Idle') {
+    console.log(`Creating new dude for user ${id} at position`, position);
     const newDude = new Player(
         scene,
         '/models/dude.glb', // Model path
         false // Non-local user
     );
     newDude.setPosition(position.x, position.y, position.z);
-    balls[id] = newDude;
+    newDude.setRotation(rotation);
+    newDude.setAction(action);
+    dudes[id] = newDude;
 }
 
-export function updateDudePositionById(id, position) {
-    if (!balls[id]) {
-        createDudeForUser(id, position);
+export function updateDudePositionById(id, position, rotation, action = 'Idle') {
+    if (!dudes[id]) {
+        console.log(`Creating new dude for user ${id} at position`, position);
+        createDudeForUser(id, position, rotation, action);
     } else {
-        balls[id].setPosition(position.x, position.y, position.z);
+        console.log(`Updating position for user ${id} to`, position);
+        dudes[id].setPosition(position.x, position.y, position.z);
+        dudes[id].setRotation(rotation);
+        dudes[id].setAction(action);
+    }
+}
+
+export function removeDudeById(id) {
+    const dude = dudes[id];
+    if (dude) {
+        scene.remove(dude.mesh); // Remove the mesh from the scene
+        delete dudes[id]; // Delete the player from the dudes object
+        console.log(`Player with id ${id} removed from scene`);
+    } else {
+        console.warn(`Player with id ${id} not found`);
     }
 }
 

@@ -1,4 +1,3 @@
-// game-server/src/server.js
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -13,23 +12,35 @@ let userCounter = 1;
 wss.on('connection', (ws) => {
     console.log('New client connected');
     const userId = `User${userCounter++}`;
-    const user = { id: userId, socket: ws, position: { x: 0, y: 0, z: 0 } };
+    const user = { id: userId, socket: ws, position: { x: 0, y: 0, z: 0 }, rotation: 0, action: 'Idle' };
     clients.push(user);
 
     // Send initial lobby state and positions to the new client
     ws.send(JSON.stringify({
         type: 'init',
         userId, // Send userId to the client
-        users: clients.map(client => ({ id: client.id, position: client.position }))
+        users: clients.map(client => ({
+            id: client.id,
+            position: client.position,
+            rotation: client.rotation,
+            action: client.action
+        }))
     }));
+    console.log(`Sent init data to ${userId}:`, clients.map(client => ({
+        id: client.id,
+        position: client.position,
+        rotation: client.rotation,
+        action: client.action
+    })));
 
     // Broadcast the new user to all existing clients
     clients.forEach(client => {
         if (client.socket !== ws && client.socket.readyState === WebSocket.OPEN) {
             client.socket.send(JSON.stringify({
                 type: 'newUser',
-                user: { id: userId, position: user.position }
+                user: { id: userId, position: user.position, rotation: user.rotation, action: user.action }
             }));
+            console.log(`Broadcasted newUser data for ${userId} to ${client.id}`);
         }
     });
 
@@ -44,36 +55,38 @@ wss.on('connection', (ws) => {
                 return;
             }
 
-            // Update user's position
+            // Update user's position, rotation, and action
             user.position = data.position;
+            user.rotation = data.rotation;
+            user.action = data.action;
 
-            // Broadcast the new position to all clients
+            // Broadcast the new position, rotation, and action to all clients
             clients.forEach(client => {
                 if (client.socket.readyState === WebSocket.OPEN) {
                     client.socket.send(JSON.stringify({
                         type: 'updatePosition',
                         id: userId,
-                        position: data.position
+                        position: data.position,
+                        rotation: data.rotation,
+                        action: data.action
                     }));
+                    console.log(`Broadcasted updatePosition data for ${userId} to ${client.id}`);
                 }
             });
-        } else {
-            // Broadcast the message to all clients
-            clients.forEach(client => {
-                if (client.socket.readyState === WebSocket.OPEN) {
-                    client.socket.send(JSON.stringify({ type: 'message', from: userId, content: message }));
-                }
-            });
+        } else if (data.type === 'removeUser') {
+            console.log(`${userId} is disconnecting`);
+            ws.close();
         }
     });
 
     ws.on('close', () => {
         console.log(`${userId} disconnected`);
         clients = clients.filter(client => client.socket !== ws);
-        // Notify all clients about the updated lobby state
+        // Notify all clients about the removed user
         clients.forEach(client => {
             if (client.socket.readyState === WebSocket.OPEN) {
-                client.socket.send(JSON.stringify({ type: 'lobby', users: clients.map(client => client.id) }));
+                client.socket.send(JSON.stringify({ type: 'removeUser', id: userId }));
+                console.log(`Notified ${client.id} about removal of ${userId}`);
             }
         });
     });
