@@ -19,14 +19,14 @@ wss.on('connection', (ws) => {
     ws.send(JSON.stringify({
         type: 'init',
         userId, // Send userId to the client
-        users: clients.map(client => ({
+        users: clients.filter(client => client.id !== userId).map(client => ({
             id: client.id,
             position: client.position,
             rotation: client.rotation,
             action: client.action
         }))
     }));
-    console.log(`Sent init data to ${userId}:`, clients.map(client => ({
+    console.log(`Sent init data to ${userId}:`, clients.filter(client => client.id !== userId).map(client => ({
         id: client.id,
         position: client.position,
         rotation: client.rotation,
@@ -60,9 +60,9 @@ wss.on('connection', (ws) => {
             user.rotation = data.rotation;
             user.action = data.action;
 
-            // Broadcast the new position, rotation, and action to all clients
+            // Broadcast the new position, rotation, and action to all clients except the sender
             clients.forEach(client => {
-                if (client.socket.readyState === WebSocket.OPEN) {
+                if (client.socket !== ws && client.socket.readyState === WebSocket.OPEN) {
                     client.socket.send(JSON.stringify({
                         type: 'updatePosition',
                         id: userId,

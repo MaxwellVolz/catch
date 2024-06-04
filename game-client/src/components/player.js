@@ -1,4 +1,3 @@
-// src/components/player.js
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { updateDudePosition } from './socket.js';
@@ -38,11 +37,13 @@ export class Player {
                     const action = this.mixer.clipAction(clip);
                     this.actions[clip.name] = action;
                     console.log(`Loaded animation: ${clip.name}`);
-                    this.setAction('Idle');
                 });
 
                 this.scene.add(this.mesh); // Add the model to the scene
                 console.log('Model added to scene');
+
+                // Set initial action to idle
+                this.setAction('Idle');
             },
             undefined,
             (error) => {
@@ -111,9 +112,8 @@ export class Player {
 
         this.setAction(action);
 
-        if (this.mixer) this.mixer.update(this.speed);
+        if (this.mixer) this.mixer.update(0.016); // Update the mixer with a fixed time step
     }
-
 
     setAction(name) {
         if (this.currentAction === this.actions[name]) {

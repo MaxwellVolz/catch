@@ -38,13 +38,13 @@ export function initScene() {
 }
 
 function createUserDude() {
-    console.log('Creating local user ball');
+    console.log('Creating local user');
     userDude = new Player(
         scene,
         '/models/dude.glb', // Model path
         true // Local user with controls enabled
     );
-    dudes['user'] = userDude;
+    // No need to add local user to dudes, as it is managed separately
 }
 
 function onWindowResize() {
@@ -62,7 +62,7 @@ export function createDudeForUser(id, position, rotation, action = 'Idle') {
     );
     newDude.setPosition(position.x, position.y, position.z);
     newDude.setRotation(rotation);
-    newDude.setAction(action);
+    newDude.setAction(action); // Set the initial action
     dudes[id] = newDude;
 }
 
@@ -74,7 +74,7 @@ export function updateDudePositionById(id, position, rotation, action = 'Idle') 
         console.log(`Updating position for user ${id} to`, position);
         dudes[id].setPosition(position.x, position.y, position.z);
         dudes[id].setRotation(rotation);
-        dudes[id].setAction(action);
+        dudes[id].setAction(action); // Update the action
     }
 }
 
@@ -91,5 +91,18 @@ export function removeDudeById(id) {
 
 export function animate() {
     requestAnimationFrame(animate);
+
+    // Update the local player's animation mixer
+    if (userDude && userDude.mixer) {
+        userDude.mixer.update(0.016); // Update with a fixed time step
+    }
+
+    // Update the animation mixers for all networked players
+    Object.values(dudes).forEach(dude => {
+        if (dude.mixer) {
+            dude.mixer.update(0.016); // Update with a fixed time step
+        }
+    });
+
     renderer.render(scene, camera);
 }

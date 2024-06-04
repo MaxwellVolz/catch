@@ -26,7 +26,9 @@ export function connectWebSocket() {
         } else if (data.type === 'message') {
             console.log(`Message from ${data.from}: ${data.content}`);
         } else if (data.type === 'updatePosition') {
-            updateDudePositionById(data.id, data.position, data.rotation, data.action);
+            if (data.id !== userId) {
+                updateDudePositionById(data.id, data.position, data.rotation, data.action);
+            }
         } else if (data.type === 'removeUser') {
             removeDudeById(data.id);
         } else if (data.type === 'newUser') {
