@@ -3,19 +3,20 @@ import { updateBallPositionById, createBallForUser } from './scene.js';
 
 const SOCKET_URL = 'ws://localhost:3000';
 let socket;
+let userId = null;
 
 export function connectWebSocket() {
     socket = new WebSocket(SOCKET_URL);
 
     socket.addEventListener('open', () => {
         console.log('Connected to WebSocket server');
-        socket.send(JSON.stringify({ type: 'join' }));
     });
 
     socket.addEventListener('message', (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'init') {
             console.log('Initial users and positions:', data.users);
+            userId = data.userId; // Store the assigned user ID
             data.users.forEach(user => {
                 updateBallPositionById(user.id, user.position);
             });
@@ -42,6 +43,9 @@ export function connectWebSocket() {
 
 export function updateBallPosition(position) {
     if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'updatePosition', position }));
+        console.log("Sending")
+        console.log(JSON.stringify({ type: 'updatePosition', id: userId, position }))
+
+        socket.send(JSON.stringify({ type: 'updatePosition', id: userId, position }));
     }
 }
