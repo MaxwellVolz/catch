@@ -1,5 +1,6 @@
 // game-client/src/components/player.js
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { updateDudePosition, broadcastBallUpdate } from './socket.js';
 
@@ -163,30 +164,55 @@ export class Player {
         return this.collider.intersectsBox(otherCollider);
     }
 
-    // Method to pick up the ball
     pickUpBall(ball) {
         if (this.debounceBallPickup) return;
-        this.hasBall = true;
-        ball.removeFromScene();
-        broadcastBallUpdate({ position: null, holder: this.isLocal ? 'local' : this.id });
-        this.debounceBallPickup = true;
-        setTimeout(() => {
-            this.debounceBallPickup = false;
-        }, 3000);
-    }
 
-    // Method to throw the ball
+        this.hasBall = true;
+        this.debounceBallPickup = true;
+        ball.removeFromScene();
+        this.scene.remove(ball.mesh);
+
+        console.log('Picked up the ball');
+    }
     throwBall() {
         if (!this.hasBall) return;
+
         this.hasBall = false;
-        const ballPosition = this.getPosition().clone();
-        const ballVelocity = new THREE.Vector3(0, 1, -1).applyQuaternion(this.mesh.quaternion);
-        broadcastBallUpdate({ position: ballPosition, velocity: ballVelocity });
-        this.debounceBallPickup = true;
-        setTimeout(() => {
-            this.debounceBallPickup = false;
-        }, 3000);
+
+        if (!ballBody) {
+            console.error('ballBody is not defined');
+            return;
+        }
+
+        const ballPosition = {
+            x: this.mesh.position.x,
+            y: this.mesh.position.y + 1,
+            z: this.mesh.position.z
+        };
+
+        const ballVelocity = {
+            x: Math.sin(this.mesh.rotation.y) * 5, // Adjust velocity scale as needed
+            y: 0,
+            z: Math.cos(this.mesh.rotation.y) * 5
+        };
+
+        ballBody.position.set(ballPosition.x, ballPosition.y, ballPosition.z);
+        ballBody.velocity.set(ballVelocity.x, ballVelocity.y, ballVelocity.z);
+
+        broadcastBallUpdate({
+            position: ballPosition,
+            velocity: ballVelocity
+        });
+
+        this.debounceBallPickup = false;
+
+        console.log('Threw the ball with Cannon.js physics');
     }
+
+
+
+
+
 
     // Handle disconnect/drop ball logic
     handleDisconnect() {

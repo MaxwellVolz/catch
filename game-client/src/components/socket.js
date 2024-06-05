@@ -58,7 +58,7 @@ export function connectWebSocket() {
 export function updateDudePosition(position, rotation, action) {
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'updatePosition', id: userId, position, rotation, action }));
-        console.log('Sent updatePosition data:', { id: userId, position, rotation, action });
+        // console.log('Sent updatePosition data:', { id: userId, position, rotation, action });
     }
 }
 
@@ -70,5 +70,16 @@ export function broadcastBallUpdate(ball) {
 }
 
 function handleBallUpdate(ball) {
-    updateBaseball(ball.position, ball.velocity, ball.holder);
+    if (ball && ball.position && ball.velocity) {
+        if (!ballBody) {
+            createBaseball(ball.position);
+        } else {
+            ballBody.position.set(ball.position.x, ball.position.y, ball.position.z);
+            ballBody.velocity.set(ball.velocity.x, ball.velocity.y, ball.velocity.z);
+            updateBaseball(ball.position, ball.velocity);
+        }
+        console.log('Handled ball update with Cannon.js physics:', ball);
+    } else {
+        console.error('Invalid ball update data:', ball);
+    }
 }

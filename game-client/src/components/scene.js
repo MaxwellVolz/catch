@@ -2,12 +2,24 @@
 import * as THREE from 'three';
 import { Player } from './player.js';
 import { Baseball } from './baseball.js';
+import * as CANNON from 'cannon-es';
+
+
 
 let scene, camera, renderer;
 let plane;
 const dudes = {};
 let userDude;
+
+
 let baseball;
+
+// Physics
+let ballBody;
+let world, physicsMaterial, groundBody;
+
+const timeStep = 1 / 60;
+
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -15,8 +27,26 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+function initPhysics() {
+    world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0); // Set gravity
+
+    physicsMaterial = new CANNON.Material("physicsMaterial");
+
+    // Create a ground plane
+    const groundShape = new CANNON.Plane();
+    groundBody = new CANNON.Body({
+        mass: 0, // mass == 0 makes the body static
+        shape: groundShape,
+        material: physicsMaterial
+    });
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
+}
+
 export function initScene() {
     scene = new THREE.Scene();
+    initPhysics(); // Initialize physics
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 10;
@@ -37,8 +67,9 @@ export function initScene() {
     // Create a player
     createUserDude();
 
-    // Create baseball
-    createBaseball();
+    // Initialize baseball as null; it will be created later
+    baseball = null;
+
 
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -59,16 +90,6 @@ function createUserDude() {
     // No need to add local user to dudes, as it is managed separately
 }
 
-function createBaseball() {
-    console.log('Creating baseball...');
-    const initialPosition = new THREE.Vector3(0, 1, 0); // Set initial position here
-    const initialRotation = Math.PI / 4; // Set initial rotation here (example: 45 degrees)
-    baseball = new Baseball(
-        scene,
-        initialPosition,
-        initialRotation
-    );
-}
 
 export function createDudeForUser(id, position, rotation, action = 'Idle') {
     console.log(`Creating new dude for user ${id} at position`, position);
@@ -108,9 +129,56 @@ export function removeDudeById(id) {
         console.warn(`Player with id ${id} not found`);
     }
 }
+function createBaseball(position) {
+    console.log('Creating baseball...');
+    const initialPosition = new THREE.Vector3(position.x, position.y, position.z);
+    const initialRotation = new THREE.Vector3();
+
+    // Create the baseball with both Three.js and Cannon.js components
+    baseball = new Baseball(scene, world, initialPosition, initialRotation);
+
+    // Create the Cannon.js body for the baseball
+    const shape = new CANNON.Sphere(0.2);
+    ballBody = new CANNON.Body({
+        mass: 1,
+        position: new CANNON.Vec3(position.x, position.y, position.z),
+        shape: shape
+    });
+
+    world.addBody(ballBody);
+    console.log('Baseball created and added to scene and physics world.');
+}
+
+
+export function updateBaseball(position, velocity) {
+    if (!position || !velocity) {
+        console.error('Invalid position or velocity:', { position, velocity });
+        return;
+    }
+
+    if (!baseball) {
+        createBaseball(position);
+    } else {
+        ballBody.position.set(position.x, position.y, position.z);
+        ballBody.velocity.set(velocity.x, velocity.y, velocity.z);
+        baseball.mesh.position.copy(ballBody.position);
+        baseball.mesh.quaternion.copy(ballBody.quaternion);
+        console.log('Baseball position and velocity updated:', { position, velocity });
+    }
+}
+
 
 export function animate() {
     requestAnimationFrame(animate);
+
+    // Update physics
+    world.step(timeStep);
+
+    // Sync the baseball position with the Cannon.js body
+    if (baseball && ballBody) {
+        baseball.mesh.position.copy(ballBody.position);
+        baseball.mesh.quaternion.copy(ballBody.quaternion);
+    }
 
     // Update the local player's animation mixer
     if (userDude && userDude.mixer) {
@@ -133,27 +201,4 @@ export function animate() {
     }
 
     renderer.render(scene, camera);
-}
-
-export function updateBaseball(position, velocity, holder) {
-    if (holder) {
-        if (holder === 'local') {
-            baseball.removeFromScene();
-            userDude.hasBall = true;
-        } else {
-            const player = dudes[holder];
-            if (player) {
-                player.hasBall = true;
-                baseball.removeFromScene();
-            }
-        }
-    } else {
-        if (!baseball.active) {
-            baseball = new Baseball(scene, position);
-        } else {
-            baseball.mesh.position.copy(position);
-            baseball.velocity.copy(velocity);
-            baseball.active = true;
-        }
-    }
 }

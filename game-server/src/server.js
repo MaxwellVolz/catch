@@ -10,7 +10,7 @@ const wss = new WebSocket.Server({ server });
 let clients = [];
 let userCounter = 1;
 let ballState = {
-    position: { x: 0, y: 1, z: 0 },
+    position: { x: 0, y: 21, z: 3 },
     velocity: { x: 0, y: 0, z: 0 },
     holder: null
 };
@@ -80,14 +80,14 @@ wss.on('connection', (ws) => {
                     console.log(`Broadcasted updatePosition data for ${userId} to ${client.id}`);
                 }
             });
-        } else if (data.type === 'ballUpdate') {
-            // Update ball state
-            ballState = data.ball;
+        } else if (data.type === 'newBall') {
+
+            // TODO: broadcast newball to all clients
 
             // Broadcast ball state to all clients
             clients.forEach(client => {
                 if (client.socket.readyState === WebSocket.OPEN) {
-                    client.socket.send(JSON.stringify({ type: 'ballUpdate', ball: ballState }));
+                    client.socket.send(JSON.stringify({ type: 'newBall', ball: ballState }));
                 }
             });
         } else if (data.type === 'removeUser') {

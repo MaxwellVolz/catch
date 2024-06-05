@@ -1,50 +1,41 @@
 // game-client/src/components/baseball.js
 import * as THREE from 'three';
-import { broadcastBallUpdate } from './socket.js';
+import * as CANNON from 'cannon-es';
 
 export class Baseball {
-    constructor(scene, position = new THREE.Vector3(0, 1, 0), rotation = 0) {
+    constructor(scene, world, position, rotation) {
         this.scene = scene;
-        this.geometry = new THREE.SphereGeometry(0.5, 32, 32);
-        this.material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
+        this.world = world;
+
+        // Create Three.js mesh
+        const geometry = new THREE.SphereGeometry(0.2, 32, 32);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.copy(position);
-        this.mesh.rotation.y = rotation;
-        this.velocity = new THREE.Vector3(0, 0, 0);
-        this.active = true;
+        this.mesh.rotation.setFromVector3(rotation);
 
+        // Add the mesh to the scene
         this.scene.add(this.mesh);
-        this.update();
-    }
+        console.log('Baseball mesh added to scene:', this.mesh);
 
-    update() {
-        if (!this.active) return;
-        requestAnimationFrame(() => this.update());
+        // Create Cannon.js body
+        const shape = new CANNON.Sphere(0.2);
+        this.body = new CANNON.Body({
+            mass: 1,
+            position: new CANNON.Vec3(position.x, position.y, position.z),
+            shape: shape
+        });
 
-        if (this.mesh.position.y <= 0) {
-            this.velocity.set(0, 0, 0);
-            this.active = false;
-            broadcastBallUpdate({ position: this.mesh.position, velocity: this.velocity, holder: null });
-        } else {
-            this.mesh.position.add(this.velocity);
-        }
-    }
+        // Add the body to the physics world
+        this.world.addBody(this.body);
+        console.log('Baseball body added to world:', this.body);
 
-    throw(velocity) {
-        this.velocity.copy(velocity).multiplyScalar(0.2).setY(1);
         this.active = true;
-    }
-
-    getPosition() {
-        return this.mesh.position.clone();
-    }
-
-    getRotation() {
-        return this.mesh.rotation.y;
     }
 
     removeFromScene() {
         this.scene.remove(this.mesh);
+        this.world.removeBody(this.body);
         this.active = false;
     }
 }
