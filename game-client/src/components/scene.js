@@ -1,10 +1,19 @@
+// game-client/src/components/scene.js
 import * as THREE from 'three';
 import { Player } from './player.js';
+import { Baseball } from './baseball.js';
 
 let scene, camera, renderer;
 let plane;
 const dudes = {};
 let userDude;
+let baseball;
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
 export function initScene() {
     scene = new THREE.Scene();
@@ -25,8 +34,11 @@ export function initScene() {
     plane.rotation.x = Math.PI / 2;
     scene.add(plane);
 
-    // Create a player ball
+    // Create a player
     createUserDude();
+
+    // Create baseball
+    createBaseball();
 
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
@@ -38,7 +50,7 @@ export function initScene() {
 }
 
 function createUserDude() {
-    console.log('Creating local user');
+    console.log('Creating local user...');
     userDude = new Player(
         scene,
         '/models/dude.glb', // Model path
@@ -47,10 +59,15 @@ function createUserDude() {
     // No need to add local user to dudes, as it is managed separately
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+function createBaseball() {
+    console.log('Creating baseball...');
+    const initialPosition = new THREE.Vector3(0, 1, 0); // Set initial position here
+    const initialRotation = Math.PI / 4; // Set initial rotation here (example: 45 degrees)
+    baseball = new Baseball(
+        scene,
+        initialPosition,
+        initialRotation
+    );
 }
 
 export function createDudeForUser(id, position, rotation, action = 'Idle') {
@@ -81,6 +98,9 @@ export function updateDudePositionById(id, position, rotation, action = 'Idle') 
 export function removeDudeById(id) {
     const dude = dudes[id];
     if (dude) {
+        if (dude.hasBall) {
+            dude.throwBall();
+        }
         scene.remove(dude.mesh); // Remove the mesh from the scene
         delete dudes[id]; // Delete the player from the dudes object
         console.log(`Player with id ${id} removed from scene`);
@@ -104,5 +124,36 @@ export function animate() {
         }
     });
 
+    // Check for collisions between local player and baseball
+    if (userDude && baseball) {
+        if (userDude.checkCollision(baseball)) {
+            console.log('Collision detected between player and baseball');
+            userDude.pickUpBall(baseball);
+        }
+    }
+
     renderer.render(scene, camera);
+}
+
+export function updateBaseball(position, velocity, holder) {
+    if (holder) {
+        if (holder === 'local') {
+            baseball.removeFromScene();
+            userDude.hasBall = true;
+        } else {
+            const player = dudes[holder];
+            if (player) {
+                player.hasBall = true;
+                baseball.removeFromScene();
+            }
+        }
+    } else {
+        if (!baseball.active) {
+            baseball = new Baseball(scene, position);
+        } else {
+            baseball.mesh.position.copy(position);
+            baseball.velocity.copy(velocity);
+            baseball.active = true;
+        }
+    }
 }

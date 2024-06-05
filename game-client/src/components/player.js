@@ -1,6 +1,7 @@
+// game-client/src/components/player.js
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { updateDudePosition } from './socket.js';
+import { updateDudePosition, broadcastBallUpdate } from './socket.js';
 
 export class Player {
     constructor(scene, modelPath, isLocal = false) {
@@ -13,6 +14,8 @@ export class Player {
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.speed = 0.1;
         this.keys = {};
+        this.hasBall = false;
+        this.debounceBallPickup = false;
 
         this.loadModel();
 
@@ -44,6 +47,9 @@ export class Player {
 
                 // Set initial action to idle
                 this.setAction('Idle');
+
+                // Create a bounding box for collision detection
+                this.collider = new THREE.Box3().setFromObject(this.mesh);
             },
             undefined,
             (error) => {
@@ -60,6 +66,9 @@ export class Player {
 
     onKeyDown(event) {
         this.keys[event.key] = true;
+        if (event.key === ' ' && this.hasBall) {
+            this.throwBall();
+        }
     }
 
     onKeyUp(event) {
@@ -104,6 +113,9 @@ export class Player {
             const angle = Math.atan2(this.velocity.x, this.velocity.z);
             this.mesh.rotation.y = angle;
 
+            // Update the collider position
+            this.collider.setFromObject(this.mesh);
+
             updateDudePosition(this.mesh.position, this.mesh.rotation.y, action); // Send position, rotation, and action to the server
         } else {
             action = 'Idle';
@@ -126,7 +138,10 @@ export class Player {
     }
 
     setPosition(x, y, z) {
-        if (this.mesh) this.mesh.position.set(x, y, z);
+        if (this.mesh) {
+            this.mesh.position.set(x, y, z);
+            this.collider.setFromObject(this.mesh); // Update collider position
+        }
     }
 
     setRotation(y) {
@@ -139,5 +154,44 @@ export class Player {
 
     getRotation() {
         return this.mesh ? this.mesh.rotation.y : 0;
+    }
+
+    // Method to check for collision with another object
+    checkCollision(otherObject) {
+        if (!this.collider || !otherObject || !otherObject.mesh) return false;
+        const otherCollider = new THREE.Box3().setFromObject(otherObject.mesh);
+        return this.collider.intersectsBox(otherCollider);
+    }
+
+    // Method to pick up the ball
+    pickUpBall(ball) {
+        if (this.debounceBallPickup) return;
+        this.hasBall = true;
+        ball.removeFromScene();
+        broadcastBallUpdate({ position: null, holder: this.isLocal ? 'local' : this.id });
+        this.debounceBallPickup = true;
+        setTimeout(() => {
+            this.debounceBallPickup = false;
+        }, 3000);
+    }
+
+    // Method to throw the ball
+    throwBall() {
+        if (!this.hasBall) return;
+        this.hasBall = false;
+        const ballPosition = this.getPosition().clone();
+        const ballVelocity = new THREE.Vector3(0, 1, -1).applyQuaternion(this.mesh.quaternion);
+        broadcastBallUpdate({ position: ballPosition, velocity: ballVelocity });
+        this.debounceBallPickup = true;
+        setTimeout(() => {
+            this.debounceBallPickup = false;
+        }, 3000);
+    }
+
+    // Handle disconnect/drop ball logic
+    handleDisconnect() {
+        if (this.hasBall) {
+            this.throwBall();
+        }
     }
 }

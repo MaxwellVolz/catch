@@ -1,3 +1,4 @@
+// game-server/src/server.js
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -8,6 +9,11 @@ const wss = new WebSocket.Server({ server });
 
 let clients = [];
 let userCounter = 1;
+let ballState = {
+    position: { x: 0, y: 1, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    holder: null
+};
 
 wss.on('connection', (ws) => {
     console.log('New client connected');
@@ -24,7 +30,8 @@ wss.on('connection', (ws) => {
             position: client.position,
             rotation: client.rotation,
             action: client.action
-        }))
+        })),
+        ball: ballState
     }));
     console.log(`Sent init data to ${userId}:`, clients.filter(client => client.id !== userId).map(client => ({
         id: client.id,
@@ -71,6 +78,16 @@ wss.on('connection', (ws) => {
                         action: data.action
                     }));
                     console.log(`Broadcasted updatePosition data for ${userId} to ${client.id}`);
+                }
+            });
+        } else if (data.type === 'ballUpdate') {
+            // Update ball state
+            ballState = data.ball;
+
+            // Broadcast ball state to all clients
+            clients.forEach(client => {
+                if (client.socket.readyState === WebSocket.OPEN) {
+                    client.socket.send(JSON.stringify({ type: 'ballUpdate', ball: ballState }));
                 }
             });
         } else if (data.type === 'removeUser') {

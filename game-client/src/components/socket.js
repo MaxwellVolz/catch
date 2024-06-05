@@ -1,4 +1,5 @@
-import { updateDudePositionById, createDudeForUser, removeDudeById } from './scene.js';
+// game-client/src/components/socket.js
+import { updateDudePositionById, createDudeForUser, removeDudeById, updateBaseball } from './scene.js';
 
 const SOCKET_URL = 'ws://localhost:3000';
 let socket;
@@ -21,6 +22,9 @@ export function connectWebSocket() {
             data.users.forEach(user => {
                 updateDudePositionById(user.id, user.position, user.rotation, user.action);
             });
+            if (data.ball) {
+                updateBaseball(data.ball.position, data.ball.velocity, data.ball.holder);
+            }
         } else if (data.type === 'lobby') {
             console.log('Current users in the lobby:', data.users);
         } else if (data.type === 'message') {
@@ -34,6 +38,8 @@ export function connectWebSocket() {
         } else if (data.type === 'newUser') {
             console.log(`New user joined: ${data.user.id}`);
             createDudeForUser(data.user.id, data.user.position, data.user.rotation, data.user.action);
+        } else if (data.type === 'ballUpdate') {
+            handleBallUpdate(data.ball);
         }
     });
 
@@ -54,4 +60,15 @@ export function updateDudePosition(position, rotation, action) {
         socket.send(JSON.stringify({ type: 'updatePosition', id: userId, position, rotation, action }));
         console.log('Sent updatePosition data:', { id: userId, position, rotation, action });
     }
+}
+
+export function broadcastBallUpdate(ball) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'ballUpdate', ball }));
+        console.log('Sent ballUpdate data:', ball);
+    }
+}
+
+function handleBallUpdate(ball) {
+    updateBaseball(ball.position, ball.velocity, ball.holder);
 }

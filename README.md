@@ -23,9 +23,9 @@ Browser experience with websockets and threejs.
 
 ```sh
 game-client
-├── assets
-│   ├── player.png
-│   └── background.png
+├── public
+│   ├── dude.glb
+│   └── 
 ├── bundlers
 │   └── vite.config.js
 ├── src
@@ -34,11 +34,9 @@ game-client
 │   ├── libs
 │   │   └── socket.io.js
 │   ├── components
-│   │   ├── player.js
-│   │   ├── scene.js
-│   │   └── socket.js
-│   └── styles
-│       └── main.css
+│       ├── player.js
+│       ├── scene.js
+│       └── socket.js
 ├── node_modules/
 ├── package.json
 └── README.md
