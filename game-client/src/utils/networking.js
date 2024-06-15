@@ -5,8 +5,9 @@ import { createBall } from '../components/player';
 const socket = io('http://localhost:3000');
 const players = {};
 const ballMap = new Map();
+const markers = new Map();  // Use a Map to track markers by ball id
 
-export function handleSocketConnections(scene, player, balls, world) {
+export function handleSocketConnections(scene, player, balls, world, markers, createMarker) {
     console.log('World in handleSocketConnections:', world);
 
     socket.on('connect', () => {
@@ -40,6 +41,11 @@ export function handleSocketConnections(scene, player, balls, world) {
             const ball = createBall(data.id, position, rotation, velocity, world);
             balls.push(ball);
             ballMap.set(data.id, ball);
+
+            // Add marker below the ball
+            const marker = createMarker();
+            markers.set(data.id, marker);
+            scene.add(marker);
         }
     });
 
@@ -48,9 +54,11 @@ export function handleSocketConnections(scene, player, balls, world) {
         const ball = ballMap.get(data.id);
         if (ball) {
             scene.remove(ball.mesh);
+            scene.remove(markers.get(data.id));  // Remove marker from scene
             world.removeBody(ball.body);
             balls.splice(balls.indexOf(ball), 1);
             ballMap.delete(data.id);
+            markers.delete(data.id);  // Remove marker from map
         }
     });
 
@@ -75,34 +83,9 @@ export function handleEvents(scene, player, balls, world) {
 
     setInterval(emitPlayerUpdate, 100);
 
-    let canThrow = true;
-
     window.addEventListener('keydown', (event) => {
         if (event.key === ' ') {
-            if (canThrow) {
-                canThrow = false;
-                setTimeout(() => canThrow = true, 5000);
-
-                const position = player.position.clone();
-                const rotation = player.rotation.clone();
-                const velocity = new THREE.Vector3(0, 0, -0.1).applyQuaternion(player.quaternion);
-
-                const ballData = {
-                    id: socket.id + Date.now(),
-                    position: { x: position.x, y: position.y + 1.0, z: position.z },
-                    rotation: { _x: rotation.x, _y: rotation.y, _z: rotation.z },
-                    velocity: { x: velocity.x, y: velocity.y, z: velocity.z }
-                };
-
-                console.log('Emitting ballThrown event:', ballData);
-                socket.emit('ballThrown', ballData);
-
-                if (!ballMap.has(ballData.id)) {
-                    const ball = createBall(ballData.id, new THREE.Vector3(position.x, position.y + 1.0, position.z), rotation, velocity, world);
-                    balls.push(ball);
-                    ballMap.set(ballData.id, ball);
-                }
-            }
+            // No-op since throwing is now handled by mouse events
         }
     });
 }
@@ -110,4 +93,12 @@ export function handleEvents(scene, player, balls, world) {
 export function broadcastBallRemoval(ballId) {
     console.log('Broadcasting ball removal:', ballId);
     socket.emit('ballRemoved', { id: ballId });
+}
+
+function createMarker() {
+    const geometry = new THREE.CircleGeometry(0.5, 32);
+    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const marker = new THREE.Mesh(geometry, material);
+    marker.rotation.x = -Math.PI / 2;
+    return marker;
 }

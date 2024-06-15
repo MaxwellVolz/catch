@@ -12,19 +12,27 @@ export function createPlayer(scene) {
 
 export function updatePlayerState(player, input) {
     const speed = 0.1;
+    const turnSpeed = 0.05;
 
-    if (input.forward) player.position.z -= speed;
-    if (input.backward) player.position.z += speed;
-    if (input.left) player.position.x -= speed;
-    if (input.right) player.position.x += speed;
+    // Calculate forward and right vectors based on player rotation
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(player.quaternion);
+
+    if (input.forward) player.position.add(forward.multiplyScalar(speed));
+    if (input.backward) player.position.add(forward.multiplyScalar(-speed));
+    if (input.left) player.position.add(right.multiplyScalar(-speed));
+    if (input.right) player.position.add(right.multiplyScalar(speed));
+    if (input.turnLeft) player.rotation.y += turnSpeed;
+    if (input.turnRight) player.rotation.y -= turnSpeed;
 }
+
 export function renderBalls(scene, balls) {
     balls.forEach(ball => {
         ball.update();
         if (!scene.children.includes(ball.mesh)) {
             scene.add(ball.mesh);
         }
-        console.log('Rendering ball at position:', ball.mesh.position);  // Add log to check ball position during render
+        // console.log('Rendering ball at position:', ball.mesh.position);  // Add log to check ball position during render
     });
 }
 
@@ -42,9 +50,9 @@ export function createBall(id, position, rotation, velocity, world) {
     mesh.position.copy(ballPosition);
     mesh.rotation.copy(rotation);
 
-    // Create physics body
+    // Create physics body with reduced weight
     const shape = new Sphere(0.5);
-    const body = new Body({ mass: 1, position: ballPosition });
+    const body = new Body({ mass: 0.05, position: ballPosition });  // Reduced mass for floating effect
     body.addShape(shape);
     body.velocity.set(velocity.x, velocity.y, velocity.z);
     world.addBody(body);  // Ensure world is used here
@@ -57,7 +65,7 @@ export function createBall(id, position, rotation, velocity, world) {
             // Sync mesh position with physics body
             this.mesh.position.copy(this.body.position);
             this.mesh.quaternion.copy(this.body.quaternion);
-            console.log('Ball position during update:', this.mesh.position);
+            // console.log('Ball position during update:', this.mesh.position);
         }
     };
 }
