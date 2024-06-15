@@ -1,4 +1,3 @@
-// game - server\src\server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -16,6 +15,7 @@ const io = new Server(server, {
 });
 
 let players = [];
+let balls = [];
 
 io.on('connection', (socket) => {
     console.log('A player connected');
@@ -33,7 +33,14 @@ io.on('connection', (socket) => {
 
     socket.on('ballThrown', (data) => {
         console.log('Received ballThrown event:', data);
+        balls.push(data);
         io.emit('ballThrown', data);
+    });
+
+    socket.on('ballRemoved', (data) => {
+        console.log('Received ballRemoved event:', data);
+        balls = balls.filter(ball => ball.id !== data.id);
+        io.emit('ballRemoved', data);
     });
 
     socket.on('disconnect', () => {

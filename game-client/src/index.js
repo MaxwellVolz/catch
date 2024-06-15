@@ -1,6 +1,6 @@
 import { initScene } from './utils/initScene';
 import { createPlayer, updatePlayerState, renderBalls } from './components/player';
-import { handleSocketConnections, handleEvents } from './utils/networking';
+import { handleSocketConnections, handleEvents, broadcastBallRemoval } from './utils/networking';
 import { initPhysics, updatePhysics } from './utils/initPhysics';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,10 +35,26 @@ document.addEventListener('DOMContentLoaded', () => {
     handleSocketConnections(scene, player, balls, world);
     handleEvents(scene, player, balls, world);
 
+    function detectCollisions() {
+        balls.forEach((ball, index) => {
+            const distance = player.position.distanceTo(ball.mesh.position);
+            if (distance < 1) {
+                // Collision detected
+                scene.remove(ball.mesh);
+                world.removeBody(ball.body);
+                balls.splice(index, 1);
+
+                // Broadcast ball removal
+                broadcastBallRemoval(ball.id);
+            }
+        });
+    }
+
     function gameLoop() {
         updatePlayerState(player, input);
         updatePhysics(world, balls);
         renderBalls(scene, balls);
+        detectCollisions();  // Check for collisions
         requestAnimationFrame(gameLoop);
     }
 

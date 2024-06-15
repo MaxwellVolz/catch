@@ -43,6 +43,17 @@ export function handleSocketConnections(scene, player, balls, world) {
         }
     });
 
+    socket.on('ballRemoved', (data) => {
+        console.log('Ball removed event received:', data);
+        const ball = ballMap.get(data.id);
+        if (ball) {
+            scene.remove(ball.mesh);
+            world.removeBody(ball.body);
+            balls.splice(balls.indexOf(ball), 1);
+            ballMap.delete(data.id);
+        }
+    });
+
     window.addEventListener('beforeunload', () => {
         socket.disconnect();
     });
@@ -94,4 +105,9 @@ export function handleEvents(scene, player, balls, world) {
             }
         }
     });
+}
+
+export function broadcastBallRemoval(ballId) {
+    console.log('Broadcasting ball removal:', ballId);
+    socket.emit('ballRemoved', { id: ballId });
 }
