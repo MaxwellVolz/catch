@@ -1,14 +1,15 @@
-// game-client\src\index.js
 import { initScene } from './utils/initScene';
-
 import { createPlayer, updatePlayerState, renderBalls } from './components/player';
-
 import { handleSocketConnections, handleEvents } from './utils/networking';
+import { initPhysics, updatePhysics } from './utils/initPhysics';
 
 document.addEventListener('DOMContentLoaded', () => {
     const scene = initScene();
     const player = createPlayer(scene);
     const balls = [];
+    const world = initPhysics();
+
+    console.log('Physics world initialized:', world);  // Add logging to check the world object
 
     const input = {
         forward: false,
@@ -31,11 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'd') input.right = false;
     });
 
-    handleSocketConnections(scene, player, balls);
-    handleEvents(scene, player, balls);
+    handleSocketConnections(scene, player, balls, world);
+    handleEvents(scene, player, balls, world);
 
     function gameLoop() {
         updatePlayerState(player, input);
+        updatePhysics(world, balls);
         renderBalls(scene, balls);
         requestAnimationFrame(gameLoop);
     }
