@@ -21,31 +21,36 @@ Browser experience with websockets and threejs.
 
 ### Folder Structure
 
-```sh
-game-client
-├── public
-│   ├── dude.glb
-│   └── 
-├── bundlers
-│   └── vite.config.js
-├── src
-│   ├── index.js
-│   ├── index.html
-│   ├── libs
-│   │   └── socket.io.js
-│   ├── components
-│       ├── player.js
-│       ├── scene.js
-│       └── socket.js
-├── node_modules/
-├── package.json
-└── README.md
+Created with showtree "C:/Scripts/Show-Tree.ps":
 
-game-server
-├── src
-│   └── server.js
-├── node_modules/
-├── package.json
+```sh
+project-root
+├── game-client
+│   ├── public
+│   │   ├── assets
+│   │   │   ├── characters
+│   │   │   │   ├── anim
+│   │   │   │   │   ├── Idle.fbx
+│   │   │   │   │   ├── Jump.fbx
+│   │   │   │   │   └── Running.fbx
+│   │   │   │   └── dude.fbx
+│   │   │   ├── models
+│   │   │   │   ├── dude.glb
+│   │   │   │   └── dude2.glb
+│   ├── src
+│   │   ├── components
+│   │   │   ├── baseball.js
+│   │   │   ├── player.js
+│   │   │   ├── scene.js
+│   │   │   └── socket.js
+│   │   ├── styles
+│   │   │   └── styles.css
+│   │   ├── index.html
+│   │   ├── index.js
+│   └── vite.config.js
+├── game-server
+│   ├── src
+│   │   └── server.js
 └── README.md
 
 ```
