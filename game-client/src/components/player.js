@@ -6,7 +6,7 @@ export function createPlayer(scene) {
     const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
     const player = new THREE.Mesh(geometry, material);
     player.position.set(0, 0.5, 0);  // Position the player above the ground
-    scene.add(player);
+    scene.add(player);  // Ensure scene is used correctly
     return player;
 }
 
@@ -18,7 +18,6 @@ export function updatePlayerState(player, input) {
     if (input.left) player.position.x -= speed;
     if (input.right) player.position.x += speed;
 }
-
 export function renderBalls(scene, balls) {
     balls.forEach(ball => {
         ball.update();

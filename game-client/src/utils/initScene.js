@@ -1,4 +1,3 @@
-// game-client\src\utils\initScene.js
 import * as THREE from 'three';
 
 export function initScene() {
@@ -11,7 +10,7 @@ export function initScene() {
         0.1,
         1000
     );
-    camera.position.set(0, 5, 5);  // Adjust the camera position to ensure the ball is visible
+    camera.position.set(0, 25, 25);
     camera.lookAt(0, 0, 0);
 
     // Renderer setup
@@ -28,11 +27,19 @@ export function initScene() {
     scene.add(directionalLight);
 
     // Ground plane
-    const planeGeometry = new THREE.PlaneGeometry(10, 10);
+    const planeGeometry = new THREE.PlaneGeometry(100, 100);
     const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2;
     scene.add(plane);
+
+    // Invisible plane for mouse interaction
+    const invisiblePlaneGeometry = new THREE.PlaneGeometry(100, 100);
+    const invisiblePlaneMaterial = new THREE.MeshBasicMaterial({ visible: false });
+    const invisiblePlane = new THREE.Mesh(invisiblePlaneGeometry, invisiblePlaneMaterial);
+    invisiblePlane.position.y = 0;
+    invisiblePlane.rotation.x = -Math.PI / 2;
+    scene.add(invisiblePlane);
 
     // Render function
     function animate() {
@@ -41,5 +48,5 @@ export function initScene() {
     }
     animate();
 
-    return scene;
+    return { scene, camera, renderer };
 }

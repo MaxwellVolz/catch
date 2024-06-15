@@ -4,10 +4,10 @@ import { createBall } from '../components/player';
 
 const socket = io('http://localhost:3000');
 const players = {};
-const ballMap = new Map();  // Use a Map to track balls by unique identifier
+const ballMap = new Map();
 
 export function handleSocketConnections(scene, player, balls, world) {
-    console.log('World in handleSocketConnections:', world);  // Add logging to check the world object
+    console.log('World in handleSocketConnections:', world);
 
     socket.on('connect', () => {
         console.log('Connected to server');
@@ -33,13 +33,13 @@ export function handleSocketConnections(scene, player, balls, world) {
 
     socket.on('ballThrown', (data) => {
         console.log('Ball thrown event received:', data);
-        if (!ballMap.has(data.id)) {  // Check if the ball with this id already exists
+        if (!ballMap.has(data.id)) {
             const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
             const rotation = new THREE.Euler(data.rotation._x, data.rotation._y, data.rotation._z);
             const velocity = new THREE.Vector3(data.velocity.x, data.velocity.y, data.velocity.z);
-            const ball = createBall(data.id, position, rotation, velocity, world);  // Pass world here
+            const ball = createBall(data.id, position, rotation, velocity, world);
             balls.push(ball);
-            ballMap.set(data.id, ball);  // Add ball to map
+            ballMap.set(data.id, ball);
         }
     });
 
@@ -60,7 +60,7 @@ export function handleSocketConnections(scene, player, balls, world) {
 }
 
 export function handleEvents(scene, player, balls, world) {
-    console.log('World in handleEvents:', world);  // Add logging to check the world object
+    console.log('World in handleEvents:', world);
 
     function emitPlayerUpdate() {
         socket.emit('playerUpdate', {
@@ -88,8 +88,8 @@ export function handleEvents(scene, player, balls, world) {
                 const velocity = new THREE.Vector3(0, 0, -0.1).applyQuaternion(player.quaternion);
 
                 const ballData = {
-                    id: socket.id + Date.now(),  // Use a combination of socket id and timestamp as a unique id
-                    position: { x: position.x, y: position.y + 1.0, z: position.z },  // Position the ball high above the player
+                    id: socket.id + Date.now(),
+                    position: { x: position.x, y: position.y + 1.0, z: position.z },
                     rotation: { _x: rotation.x, _y: rotation.y, _z: rotation.z },
                     velocity: { x: velocity.x, y: velocity.y, z: velocity.z }
                 };
@@ -97,10 +97,10 @@ export function handleEvents(scene, player, balls, world) {
                 console.log('Emitting ballThrown event:', ballData);
                 socket.emit('ballThrown', ballData);
 
-                if (!ballMap.has(ballData.id)) {  // Check if the ball with this id already exists
-                    const ball = createBall(ballData.id, new THREE.Vector3(position.x, position.y + 1.0, position.z), rotation, velocity, world);  // Pass world here
+                if (!ballMap.has(ballData.id)) {
+                    const ball = createBall(ballData.id, new THREE.Vector3(position.x, position.y + 1.0, position.z), rotation, velocity, world);
                     balls.push(ball);
-                    ballMap.set(ballData.id, ball);  // Add ball to map
+                    ballMap.set(ballData.id, ball);
                 }
             }
         }
