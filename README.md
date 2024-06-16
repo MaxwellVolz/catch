@@ -3,6 +3,7 @@
 - [Play Catch](#play-catch)
   - [Project Overview](#project-overview)
     - [Folder Structure](#folder-structure)
+  - [Links](#links)
   - [Install](#install)
   - [Game Client](#game-client)
     - [Setup](#setup)
@@ -54,6 +55,9 @@ project-root
 └── README.md
 
 ```
+## Links
+
+[https://gero3.github.io/facetype.js/](https://gero3.github.io/facetype.js/)
 
 ## Install
 

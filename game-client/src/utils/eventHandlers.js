@@ -61,16 +61,18 @@ export function setupEventHandlers(input, player, raycaster, mouse, camera, rend
             id: socket.id + Date.now(),
             position: { x: player.mesh.position.x, y: player.mesh.position.y + 1.0, z: player.mesh.position.z },
             rotation: { _x: player.mesh.rotation.x, _y: player.mesh.rotation.y, _z: player.mesh.rotation.z },
-            velocity: { x: velocity.x, y: velocity.y, z: velocity.z }
+            velocity: { x: velocity.x, y: velocity.y, z: velocity.z },
+            thrower: socket.id,  // Add thrower information
+            initialPosition: player.mesh.position.clone()  // Add initial position
         };
 
         console.log('Emitting ballThrown event:', ballData);
         socket.emit('ballThrown', ballData);
 
         // Set cooldown
-        canThrow = false;
+        player.canThrow = false;
         setTimeout(() => {
-            canThrow = true;
-        }, 5000); // 5 seconds cooldown
+            player.canThrow = true;
+        }, 2000); // 5 seconds cooldown
     });
 }

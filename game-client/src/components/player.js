@@ -44,7 +44,7 @@ export function renderBalls(scene, balls) {
     });
 }
 
-export function createBall(id, position, rotation, velocity, world) {
+export function createBall(id, position, rotation, velocity, world, thrower) {
     const geometry = new THREE.SphereGeometry(0.5, 32, 32);
     const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     const mesh = new THREE.Mesh(geometry, material);
@@ -64,6 +64,7 @@ export function createBall(id, position, rotation, velocity, world) {
         id,
         mesh,
         body,
+        thrower, // Add thrower information
         update() {
             this.mesh.position.copy(this.body.position);
             this.mesh.quaternion.copy(this.body.quaternion);

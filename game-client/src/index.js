@@ -2,17 +2,18 @@
 
 import { initEnvironment, updatePhysics } from './utils/initEnvironment';
 import { createPlayer, updatePlayerState, renderBalls, createBall } from './components/player';
-import { handleSocketConnections, handleEvents, broadcastBallRemoval } from './utils/networking';
+import { initializeSocket, handleEvents, broadcastBallRemoval, socket } from './utils/networking';
 import { setupEventHandlers } from './utils/eventHandlers';
 import { createMarker } from './utils/createMarker';
+import { updateCatchDisplay } from './utils/textUtils';
 import { Vector3, Raycaster } from 'three';
-import { io } from 'socket.io-client';
-
-const socket = io('http://localhost:3000');
 
 document.addEventListener('DOMContentLoaded', () => {
     const { scene, camera, renderer, world, player } = initEnvironment();
     player.canThrow = true;
+    player.catchCount = 0; // Add catchCount to player state
+    const players = {};
+    players[socket.id] = player;
     const balls = [];
     const markers = new Map();
     const raycaster = new Raycaster();
@@ -37,26 +38,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupEventHandlers(input, player, raycaster, mouse, camera, renderer, socket, balls, canThrow, isCharging, chargeStartTime, chargeEndTime);
 
-    handleSocketConnections(scene, player, balls, world, markers, createMarker);
-    handleEvents(scene, player, balls, world);
+    initializeSocket(scene, player, balls, world, markers, createMarker, players);
+    handleEvents(scene, player, balls, world, players);
 
     function detectCollisions() {
         balls.forEach((ball, index) => {
-            const distance = player.mesh.position.distanceTo(ball.mesh.position);
-            if (distance < 1) {
-                scene.remove(ball.mesh);
-                scene.remove(markers.get(ball.id));  // Remove marker from scene
-                world.removeBody(ball.body);
-                balls.splice(index, 1);
-                markers.delete(ball.id);  // Remove marker from map
-                broadcastBallRemoval(ball.id);
+            Object.values(players).forEach(p => {
+                const distance = p.mesh.position.distanceTo(ball.mesh.position);
+                if (distance < 1.5) { // Increase the collision radius
+                    handleBallCatch(ball, index, p);
+                }
+            });
 
-                // Reset cooldown
-                player.canThrow = true;
+            // Check if the ball touches the ground
+            if (ball.mesh.position.y <= 0.5) {
+                handleBallTouchGround(ball, index);
             }
         });
     }
 
+    function handleBallCatch(ball, index, catcher) {
+        scene.remove(ball.mesh);
+        scene.remove(markers.get(ball.id));  // Remove marker from scene
+        world.removeBody(ball.body);
+        balls.splice(index, 1);
+        markers.delete(ball.id);  // Remove marker from map
+        broadcastBallRemoval(ball.id);
+
+        // Log catch event
+        console.log(`Ball caught by player ${catcher.mesh.name}, thrown by player ${ball.thrower}`);
+
+        // Update catch count
+        if (players[ball.thrower]) {
+            catcher.catchCount++;
+            players[ball.thrower].catchCount = catcher.catchCount; // Sync both players' catch count
+            updateCatchDisplay(ball.thrower, ball.initialPosition, catcher.mesh.position, catcher.catchCount, scene);
+        }
+
+        // Reset cooldown
+        catcher.canThrow = true;
+    }
+
+    function handleBallTouchGround(ball, index) {
+        // Log ground hit event
+        console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
+
+        // Reset thrower's catch count if exists
+        if (players[ball.thrower]) {
+            players[ball.thrower].catchCount = 0; // Reset thrower's catch count
+        }
+
+        // Remove the ball from tracking structures
+        scene.remove(ball.mesh);
+        scene.remove(markers.get(ball.id));  // Remove marker from scene
+        world.removeBody(ball.body);
+        balls.splice(index, 1);
+        markers.delete(ball.id);  // Remove marker from map
+        broadcastBallRemoval(ball.id);
+    }
 
     function updateMarkers() {
         balls.forEach(ball => {

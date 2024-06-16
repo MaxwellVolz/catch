@@ -1,19 +1,19 @@
 // game-client\src\utils\networking.js
 
-import { io } from 'socket.io-client';
 import * as THREE from 'three';
 import { createBall } from '../components/player';
+import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3000');
-const players = {};
 const ballMap = new Map();
 const markers = new Map();  // Use a Map to track markers by ball id
 
-export function handleSocketConnections(scene, player, balls, world, markers, createMarker) {
-    console.log('World in handleSocketConnections:', world);
+function initializeSocket(scene, player, balls, world, markers, createMarker, players) {
+    console.log('World in initializeSocket:', world);
 
     socket.on('connect', () => {
         console.log('Connected to server');
+        players[socket.id] = player;  // Add the player to the players object
     });
 
     socket.on('playerUpdate', (data) => {
@@ -23,12 +23,13 @@ export function handleSocketConnections(scene, player, balls, world, markers, cr
                 if (!otherPlayer) {
                     const geometry = new THREE.BoxGeometry(1, 1, 1);
                     const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-                    otherPlayer = new THREE.Mesh(geometry, material);
-                    otherPlayer.position.set(update.position.x, update.position.y, update.position.z);
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(update.position.x, update.position.y, update.position.z);
+                    otherPlayer = { mesh, catchCount: 0, canThrow: true };
                     players[update.id] = otherPlayer;
-                    scene.add(otherPlayer);
+                    scene.add(mesh);
                 } else {
-                    otherPlayer.position.set(update.position.x, update.position.y, update.position.z);
+                    otherPlayer.mesh.position.set(update.position.x, update.position.y, update.position.z);
                 }
             }
         });
@@ -40,7 +41,8 @@ export function handleSocketConnections(scene, player, balls, world, markers, cr
             const position = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
             const rotation = new THREE.Euler(data.rotation._x, data.rotation._y, data.rotation._z);
             const velocity = new THREE.Vector3(data.velocity.x, data.velocity.y, data.velocity.z);
-            const ball = createBall(data.id, position, rotation, velocity, world);
+            const ball = createBall(data.id, position, rotation, velocity, world, data.thrower);
+            ball.initialPosition = new THREE.Vector3(data.initialPosition.x, data.initialPosition.y, data.initialPosition.z);
             balls.push(ball);
             ballMap.set(data.id, ball);
 
@@ -64,12 +66,21 @@ export function handleSocketConnections(scene, player, balls, world, markers, cr
         }
     });
 
+    socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+    });
+
     window.addEventListener('beforeunload', () => {
         socket.disconnect();
     });
 }
 
-export function handleEvents(scene, player, balls, world) {
+function broadcastBallRemoval(ballId) {
+    console.log('Broadcasting ball removal:', ballId);
+    socket.emit('ballRemoved', { id: ballId });
+}
+
+function handleEvents(scene, player, balls, world, players) {
     console.log('World in handleEvents:', world);
 
     function emitPlayerUpdate() {
@@ -94,7 +105,9 @@ export function handleEvents(scene, player, balls, world) {
     });
 }
 
-export function broadcastBallRemoval(ballId) {
-    console.log('Broadcasting ball removal:', ballId);
-    socket.emit('ballRemoved', { id: ballId });
-}
+export {
+    initializeSocket,
+    broadcastBallRemoval,
+    handleEvents,
+    socket // Export socket
+};
