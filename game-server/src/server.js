@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('A player disconnected');
         players = players.filter(player => player.id !== socket.id);
+        io.emit('playerDisconnected', { id: socket.id }); // Emit disconnection event
         io.emit('playerUpdate', players);
     });
 });
