@@ -66,6 +66,14 @@ function initializeSocket(scene, player, balls, world, markers, createMarker, pl
         }
     });
 
+    socket.on('catchUpdate', (data) => {
+        console.log('Catch update received:', data);
+        if (players[data.catcherId]) {
+            players[data.catcherId].catchCount = data.catchCount;
+            // Optionally update UI to reflect new catch count
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Disconnected from server');
     });

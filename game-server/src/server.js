@@ -43,6 +43,11 @@ io.on('connection', (socket) => {
         io.emit('ballRemoved', data);
     });
 
+    socket.on('catchUpdate', (data) => {
+        console.log('Catch update received:', data);
+        io.emit('catchUpdate', data);
+    });
+
     socket.on('disconnect', () => {
         console.log('A player disconnected');
         players = players.filter(player => player.id !== socket.id);

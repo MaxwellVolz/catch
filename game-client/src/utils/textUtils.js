@@ -1,5 +1,4 @@
 // game-client\src\utils\textUtils.js
-
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
@@ -9,8 +8,8 @@ export function createTextMesh(text, position, scene) {
     loader.load('/assets/fonts/Tiny5_Regular.json', function (font) {
         const geometry = new TextGeometry(text, {
             font: font,
-            size: 1,
-            height: 0.1,
+            size: 8, // Increased size for better readability
+            height: 1, // Increased height for better readability
         });
         const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const mesh = new THREE.Mesh(geometry, material);

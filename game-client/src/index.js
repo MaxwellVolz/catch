@@ -42,28 +42,45 @@ document.addEventListener('DOMContentLoaded', () => {
     handleEvents(scene, player, balls, world, players);
 
     function detectCollisions() {
-        balls.forEach((ball, index) => {
+        balls.forEach(ball => {
             Object.values(players).forEach(p => {
                 const distance = p.mesh.position.distanceTo(ball.mesh.position);
                 if (distance < 1.5) { // Increase the collision radius
-                    handleBallCatch(ball, index, p);
+                    console.log(`Collision detected between player ${p.mesh.name} and ball ${ball.id}`);
+                    handleBallCatch(ball.id, p);
                 }
             });
 
             // Check if the ball touches the ground
             if (ball.mesh.position.y <= 0.5) {
-                handleBallTouchGround(ball, index);
+                console.log(`Ball ${ball.id} touched the ground`);
+                handleBallTouchGround(ball.id);
             }
         });
     }
 
-    function handleBallCatch(ball, index, catcher) {
+    function handleBallCatch(ballId, catcher) {
+        const ballIndex = balls.findIndex(b => b.id === ballId);
+        if (ballIndex === -1) return; // Ball not found
+
+        const ball = balls[ballIndex];
+        if (ball.processed) return; // Ball already processed
+
+        ball.processed = true;
+
+        // Always remove the ball from the scene and physics world
         scene.remove(ball.mesh);
         scene.remove(markers.get(ball.id));  // Remove marker from scene
         world.removeBody(ball.body);
-        balls.splice(index, 1);
+        balls.splice(ballIndex, 1);
         markers.delete(ball.id);  // Remove marker from map
         broadcastBallRemoval(ball.id);
+
+        if (ball.hitGround) {
+            // Log ground hit event
+            console.log(`Ball caught by player ${catcher.mesh.name} which had already hit the ground, thrown by player ${ball.thrower}`);
+            return; // Do not update the catch count
+        }
 
         // Log catch event
         console.log(`Ball caught by player ${catcher.mesh.name}, thrown by player ${ball.thrower}`);
@@ -75,26 +92,31 @@ document.addEventListener('DOMContentLoaded', () => {
             updateCatchDisplay(ball.thrower, ball.initialPosition, catcher.mesh.position, catcher.catchCount, scene);
         }
 
+        // Emit catch update
+        socket.emit('catchUpdate', {
+            catcherId: catcher.mesh.name,
+            throwerId: ball.thrower,
+            catchCount: catcher.catchCount
+        });
+
         // Reset cooldown
         catcher.canThrow = true;
     }
 
-    function handleBallTouchGround(ball, index) {
+    function handleBallTouchGround(ballId) {
+        const ball = balls.find(b => b.id === ballId);
+        if (!ball) return;
+
         // Log ground hit event
         console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
+
+        // Mark the ball as having hit the ground
+        ball.hitGround = true;
 
         // Reset thrower's catch count if exists
         if (players[ball.thrower]) {
             players[ball.thrower].catchCount = 0; // Reset thrower's catch count
         }
-
-        // Remove the ball from tracking structures
-        scene.remove(ball.mesh);
-        scene.remove(markers.get(ball.id));  // Remove marker from scene
-        world.removeBody(ball.body);
-        balls.splice(index, 1);
-        markers.delete(ball.id);  // Remove marker from map
-        broadcastBallRemoval(ball.id);
     }
 
     function updateMarkers() {
