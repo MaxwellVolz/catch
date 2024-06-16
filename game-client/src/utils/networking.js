@@ -1,3 +1,5 @@
+// game-client\src\utils\networking.js
+
 import { io } from 'socket.io-client';
 import * as THREE from 'three';
 import { createBall } from '../components/player';
@@ -71,14 +73,16 @@ export function handleEvents(scene, player, balls, world) {
     console.log('World in handleEvents:', world);
 
     function emitPlayerUpdate() {
-        socket.emit('playerUpdate', {
-            id: socket.id,
-            position: {
-                x: player.position.x,
-                y: player.position.y,
-                z: player.position.z
-            }
-        });
+        if (player && player.mesh && player.mesh.position) {
+            socket.emit('playerUpdate', {
+                id: socket.id,
+                position: {
+                    x: player.mesh.position.x,
+                    y: player.mesh.position.y,
+                    z: player.mesh.position.z
+                }
+            });
+        }
     }
 
     setInterval(emitPlayerUpdate, 100);
@@ -93,12 +97,4 @@ export function handleEvents(scene, player, balls, world) {
 export function broadcastBallRemoval(ballId) {
     console.log('Broadcasting ball removal:', ballId);
     socket.emit('ballRemoved', { id: ballId });
-}
-
-function createMarker() {
-    const geometry = new THREE.CircleGeometry(0.5, 32);
-    const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    const marker = new THREE.Mesh(geometry, material);
-    marker.rotation.x = -Math.PI / 2;
-    return marker;
 }
