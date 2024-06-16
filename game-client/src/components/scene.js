@@ -1,16 +1,12 @@
-// game-client/src/components/scene.js
 import * as THREE from 'three';
 import { Player } from './player.js';
 import { Baseball } from './baseball.js';
 import * as CANNON from 'cannon-es';
 
-
-
 let scene, camera, renderer;
 let plane;
 const dudes = {};
 let userDude;
-
 
 let baseball;
 
@@ -19,7 +15,6 @@ let ballBody;
 let world, physicsMaterial, groundBody;
 
 const timeStep = 1 / 60;
-
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -42,6 +37,30 @@ function initPhysics() {
     });
     groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
     world.addBody(groundBody);
+}
+
+function createTree(position) {
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.set(position.x, position.y + 1, position.z); // Position trunk
+
+    const leavesGeometry = new THREE.SphereGeometry(1);
+    const leavesMaterial = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
+    const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+    leaves.position.set(position.x, position.y + 2.5, position.z); // Position leaves
+
+    scene.add(trunk);
+    scene.add(leaves);
+}
+
+function createBush(position) {
+    const bushGeometry = new THREE.SphereGeometry(0.5);
+    const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+    const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+    bush.position.set(position.x, position.y + 0.5, position.z); // Position bush
+
+    scene.add(bush);
 }
 
 export function initScene() {
@@ -70,12 +89,18 @@ export function initScene() {
     // Initialize baseball as null; it will be created later
     baseball = null;
 
-
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
     scene.add(directionalLight);
+
+    // Add trees and bushes
+    createTree(new THREE.Vector3(-3, 0, -3));
+    createTree(new THREE.Vector3(3, 0, -3));
+    createTree(new THREE.Vector3(1, 0, 1));
+    createBush(new THREE.Vector3(-2, 0, 2));
+    createBush(new THREE.Vector3(2, 0, 2));
 
     window.addEventListener('resize', onWindowResize, false);
 }
@@ -89,7 +114,6 @@ function createUserDude() {
     );
     // No need to add local user to dudes, as it is managed separately
 }
-
 
 export function createDudeForUser(id, position, rotation, action = 'Idle') {
     console.log(`Creating new dude for user ${id} at position`, position);
@@ -129,6 +153,7 @@ export function removeDudeById(id) {
         console.warn(`Player with id ${id} not found`);
     }
 }
+
 function createBaseball(position) {
     console.log('Creating baseball...');
     const initialPosition = new THREE.Vector3(position.x, position.y, position.z);
@@ -149,7 +174,6 @@ function createBaseball(position) {
     console.log('Baseball created and added to scene and physics world.');
 }
 
-
 export function updateBaseball(position, velocity) {
     if (!position || !velocity) {
         console.error('Invalid position or velocity:', { position, velocity });
@@ -166,7 +190,6 @@ export function updateBaseball(position, velocity) {
         console.log('Baseball position and velocity updated:', { position, velocity });
     }
 }
-
 
 export function animate() {
     requestAnimationFrame(animate);

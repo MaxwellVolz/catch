@@ -1,3 +1,4 @@
+// game-client\src\index.js
 import { initScene } from './utils/initScene';
 import { createPlayer, updatePlayerState, renderBalls, createBall } from './components/player';
 import { handleSocketConnections, handleEvents, broadcastBallRemoval } from './utils/networking';

@@ -1,4 +1,31 @@
+// game-client\src\utils\initScene.js
 import * as THREE from 'three';
+
+
+
+function createTree(scene, position) {
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.set(position.x, position.y + 1, position.z); // Position trunk
+
+    const leavesGeometry = new THREE.SphereGeometry(1);
+    const leavesMaterial = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
+    const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+    leaves.position.set(position.x, position.y + 2.5, position.z); // Position leaves
+
+    scene.add(trunk);
+    scene.add(leaves);
+}
+
+function createBush(scene, position) {
+    const bushGeometry = new THREE.SphereGeometry(0.5);
+    const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+    const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+    bush.position.set(position.x, position.y + 0.5, position.z); // Position bush
+
+    scene.add(bush);
+}
 
 export function initScene() {
     const scene = new THREE.Scene();
@@ -32,6 +59,16 @@ export function initScene() {
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2;
     scene.add(plane);
+
+
+    // Add trees
+    createTree(scene, new THREE.Vector3(5, 0, 5));
+    createTree(scene, new THREE.Vector3(-5, 0, -5));
+
+    // Add bushes
+    createBush(scene, new THREE.Vector3(3, 0, 3));
+    createBush(scene, new THREE.Vector3(-3, 0, -3));
+
 
     // Invisible plane for mouse interaction
     const invisiblePlaneGeometry = new THREE.PlaneGeometry(100, 100);
