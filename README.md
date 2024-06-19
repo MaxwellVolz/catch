@@ -19,7 +19,24 @@
 
 ## Project Overview
 
-Browser experience with websockets and threejs.
+
+Game Concept
+
+Browser-based multiplayer single lobby game
+
+1. each client gets a Character (position,name,catchCount=0) that they can move around the scene
+   1. sphere collider
+      1. collision with Ball broadcasts message to all clients and removes ball from the scene
+   2. rendered mesh from a .glb
+2. the Character (position,name,catchCount) is broadcast to the network and shared with other players
+3. other players (position,name,catchCount) are received and updated for each client
+   1. when a player disconnects or stops updating after X seconds they should be removed from the scene
+4. clients can throw a Ball
+   1. this broadcasts a message to all clients with (position, rotation, velocity) for the creation of the Ball
+   2. a Ball is a physics object that is created locally for all clients
+      1. sphere collider
+      2. rendered mesh
+
 
 
 ## Mixamo Model Stuff
@@ -30,34 +47,37 @@ Browser experience with websockets and threejs.
 Created with showtree "C:/Scripts/Show-Tree.ps":
 
 ```sh
-project-root
-├── game-client
-│   ├── public
-│   │   ├── assets
-│   │   │   ├── characters
-│   │   │   │   ├── anim
-│   │   │   │   │   ├── Idle.fbx
-│   │   │   │   │   ├── Jump.fbx
-│   │   │   │   │   └── Running.fbx
-│   │   │   │   └── dude.fbx
-│   │   │   ├── models
-│   │   │   │   ├── dude.glb
-│   │   │   │   └── dude2.glb
-│   ├── src
-│   │   ├── components
-│   │   │   ├── baseball.js
-│   │   │   ├── player.js
-│   │   │   ├── scene.js
-│   │   │   └── socket.js
-│   │   ├── styles
-│   │   │   └── styles.css
-│   │   ├── index.html
-│   │   ├── index.js
-│   └── vite.config.js
-├── game-server
-│   ├── src
-│   │   └── server.js
-└── README.md
+game-client/
+│
+├── src/
+│   ├── assets/                  # Static assets like models, textures, and sounds
+│   ├── components/              # Reusable game components like players and balls
+│   │   ├── Player.js
+│   │   └── Ball.js
+│   │
+│   ├── core/                    # Core game logic and initialization code
+│   │   ├── GameLoop.js
+│   │   ├── Init.js
+│   │   └── Networking.js
+│   │
+│   ├── handlers/                # Event handlers and specific game logic
+│   │   ├── InputHandler.js
+│   │   ├── CollisionHandler.js
+│   │   └── GameStateHandler.js
+│   │
+│   ├── utils/                   # Utility functions and helpers
+│   │   ├── AnimationUtils.js
+│   │   ├── PhysicsUtils.js
+│   │   └── SceneUtils.js
+│   │
+│   ├── main.js                  # Entry point for setting up the game
+│   └── styles.css               # Stylesheet for any HTML elements
+│
+├── public/
+│   ├── index.html               # Main HTML file
+│   └── favicon.ico              # Favicon
+│
+└── package.json                 # Node.js package file
 
 ```
 ## Links

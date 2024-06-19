@@ -1,5 +1,5 @@
 
-'C:\Users\narfa\Documents\_git\catch\game-client\src\components\ball.js'
+'C:\Users\narfa\Documents\_git\catch\game-client\src\controllers\ball.js'
 
 ```js
 import * as THREE from 'three';
@@ -38,12 +38,12 @@ export function createBall(id, position, rotation, velocity, world, thrower) {
 }
 ```
 
-'C:\Users\narfa\Documents\_git\catch\game-client\src\components\player.js'
+'C:\Users\narfa\Documents\_git\catch\game-client\src\controllers\player.js'
 
 ```js
 import * as THREE from 'three';
 import { Body, Sphere } from 'cannon-es';
-import { setupAnimationModels, playAction, updateMixer } from '../utils/animation';
+import { setupAnimationModels, playAction, updateMixer, playOnce } from '../utils/animation';
 import { handlePlayerMovement } from './playerMovement';
 
 let mixer, actions = {};
@@ -65,13 +65,13 @@ export async function createPlayer(scene, world) {
             body,
             char_model: model,
             velocity: new THREE.Vector3(),
-            currentAction: 'run' // Set running as the initial action
+            currentAction: 'run'  // Set the default action to 'run'
         };
 
         player.mesh.add(player.char_model);
         scene.add(player.mesh);
 
-        playAction('run'); // Start with running animation
+        playAction('run');  // Play the default run animation
 
         console.log('Player created:', player);
 
@@ -86,24 +86,16 @@ export function updatePlayerState(player, input, camera) {
 
     if (moving) {
         if (player.currentAction !== 'run') {
-            console.log(`Transitioning to run action from ${player.currentAction}`);
             playAction('run');
             player.currentAction = 'run';
         }
     } else {
         if (player.currentAction !== 'idle') {
-            console.log(`Transitioning to idle action from ${player.currentAction}`);
             playAction('idle');
             player.currentAction = 'idle';
         }
     }
 }
-
-export function updateAnimation(deltaTime) {
-    updateMixer(deltaTime);
-}
-
-export { playAction };
 
 export function renderBalls(scene, balls) {
     balls.forEach(ball => {
@@ -113,9 +105,15 @@ export function renderBalls(scene, balls) {
         }
     });
 }
+
+export function updateAnimation(deltaTime) {
+    updateMixer(deltaTime);
+}
+
+export { playAction, playOnce };
 ```
 
-'C:\Users\narfa\Documents\_git\catch\game-client\src\components\playerMovement.js'
+'C:\Users\narfa\Documents\_git\catch\game-client\src\controllers\playerMovement.js'
 
 ```js
 import * as THREE from 'three';
@@ -203,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 'C:\Users\narfa\Documents\_git\catch\game-client\src\core\gameLoop.js'
 
 ```js
-import { updatePlayerState, renderBalls, updateAnimation } from '../components/player';
+import { updatePlayerState, renderBalls, updateAnimation } from '../controllers/player';
 import { updatePhysics } from '../utils/environment';
 import { detectCollisions, handleBallCatch, handleBallTouchGround } from '../handlers/collision';
 import { updateMarkers } from '../handlers/markerUpdate';
@@ -250,58 +248,46 @@ export function gameLoop(player, input, world, balls, scene, players, markers, c
 
 ```js
 import { initEnvironment } from '../utils/environment';
-import { initializeSocket, handleEvents, socket } from '../core/networking'; // Import socket here
+import { initializeSocket, handleEvents, socket } from '../core/networking';
 import { setupEventHandlers } from '../handlers/events';
-import { createPlayer } from '../components/player';
-import { onWindowResize } from '../utils/window';
+import { createMarker } from '../utils/createMarker';
 import { Raycaster, Vector3 } from 'three';
-import * as THREE from 'three';
-
-async function setupPlayer(scene, world) {
-    const player = await createPlayer(scene, world);
-    if (!player || !player.mesh) {
-        throw new Error('Failed to create player or player mesh is missing');
-    }
-    player.canThrow = true;
-    player.catchCount = 0;
-    return player;
-}
-
-function setupGameEntities(scene, camera, renderer, world) {
-    const players = {};
-    const balls = [];
-    const markers = new Map();
-    const raycaster = new Raycaster();
-    const mouse = new THREE.Vector3();
-    const input = {
-        forward: false,
-        backward: false,
-        left: false,
-        right: false,
-    };
-
-    return { players, balls, markers, raycaster, mouse, input };
-}
+import { createPlayer } from '../controllers/player';
+import { onWindowResize } from '../utils/window';
 
 export async function initializeGame() {
     try {
         const { scene, camera, renderer, world } = initEnvironment();
-        const player = await setupPlayer(scene, world);
-        const entities = setupGameEntities(scene, camera, renderer, world);
+        const player = await createPlayer(scene, world);
 
-        // Initialize socket and set up players
-        initializeSocket(scene, player, entities.balls, world, entities.markers);
-        entities.players[socket.id] = player; // Ensure socket is defined before using it
+        if (!player || !player.mesh) {
+            throw new Error('Player or player.mesh is not defined');
+        }
 
-        // Setup event handlers after socket initialization
-        setupEventHandlers(entities.input, player, entities.raycaster, entities.mouse, camera, renderer, socket, entities.balls);
-        handleEvents(scene, player, entities.balls, world, entities.players);
+        player.canThrow = true;
+        player.catchCount = 0;
+        const players = {};
+        players[socket.id] = player;
+        const balls = [];
+        const markers = new Map();
+        const raycaster = new Raycaster();
+        const mouse = new Vector3();
+        const ballMap = new Map();
 
-        onWindowResize(camera, renderer); // Handle window resize events
-
-        return {
-            scene, camera, renderer, world, player, ...entities
+        const input = {
+            forward: false,
+            backward: false,
+            left: false,
+            right: false,
         };
+
+        setupEventHandlers(input, player, raycaster, mouse, camera, renderer, socket, balls);
+        initializeSocket(scene, player, balls, world, markers, createMarker, players);
+        handleEvents(scene, player, balls, world, players);
+
+        onWindowResize(camera, renderer);
+
+        return { scene, camera, renderer, world, player, players, balls, markers, raycaster, mouse, ballMap, input };
     } catch (error) {
         console.error('Error initializing game:', error);
         return null;
@@ -313,7 +299,7 @@ export async function initializeGame() {
 
 ```js
 import * as THREE from 'three';
-import { createBall } from '../components/ball';
+import { createBall } from '../controllers/ball';
 import { createMarker } from '../utils/createMarker'; // Import createMarker
 import { io } from 'socket.io-client';
 
@@ -501,7 +487,7 @@ let mixer;
 
 export async function setupAnimationModels(scene) {
     try {
-        const modelUrl = 'iron_man.glb';  // Update to your model file name
+        const modelUrl = 'iron_man.glb';
         const fullUrl = publicDir + 'models/' + modelUrl;
         console.log('Fetching model from URL:', fullUrl);
 
@@ -563,11 +549,10 @@ export function playAction(actionName) {
         console.log(`Playing action: ${actionName}`);
         action.reset().fadeIn(0.5).play();
         action.paused = false;
-        action.loop = THREE.LoopRepeat;
+        action.loop = THREE.LoopRepeat
         if (currentActionName && currentActionName !== actionName) {
             const currentAction = AllActions[currentActionName];
             if (currentAction) {
-                console.log(`Fading out current action: ${currentActionName}`);
                 currentAction.fadeOut(0.5);
                 currentAction.paused = true;
             }
@@ -604,7 +589,7 @@ export function playOnce(actionName) {
 
         action.onFinished = () => {
             resetAction(actionName);
-            playAction('run'); // Set running as default after one-time action
+            playAction('idle');
         };
     } else {
         console.error(`Action not found: ${actionName}`);
@@ -864,7 +849,7 @@ export function onWindowResize(camera, renderer) {
 
 ```js
 import { updateCatchDisplay } from '../utils/textUtils';
-import { playAction } from '../components/player';
+import { playAction } from '../controllers/player';
 
 export function detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket) {
     balls.forEach(ball => {
@@ -1086,44 +1071,6 @@ export function updateMarkers(balls, markers) {
         }
     });
 }
-```
-
-'C:\Users\narfa\Documents\_git\catch\game-server\src\bones_fix.js'
-
-```js
-const fs = require('fs');
-const path = require('path');
-const gltfPipeline = require('gltf-pipeline');
-
-const directory = './gltf_output';
-const pattern = /mixa\w*:/g;
-
-function processGlbFile(filePath) {
-    const fileData = fs.readFileSync(filePath);
-    gltfPipeline.gltfToGlb(fileData)
-        .then(results => {
-            let json = JSON.stringify(results.gltf);
-            json = json.replace(pattern, '');
-
-            gltfPipeline.glbToGltf(Buffer.from(json))
-                .then(newResults => {
-                    fs.writeFileSync(filePath, Buffer.from(newResults.glb));
-                    console.log(`Processed file: ${filePath}`);
-                })
-                .catch(err => {
-                    console.error(`Error converting GLTF to GLB for file ${filePath}: ${err}`);
-                });
-        })
-        .catch(err => {
-            console.error(`Error processing file ${filePath}: ${err}`);
-        });
-}
-
-fs.readdirSync(directory).forEach(file => {
-    if (path.extname(file) === '.glb') {
-        processGlbFile(path.join(directory, file));
-    }
-});
 ```
 
 'C:\Users\narfa\Documents\_git\catch\game-server\src\server.js'

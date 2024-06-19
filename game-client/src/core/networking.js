@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createBall } from '../components/ball';
+import { createBall } from '../controllers/ball';
 import { createMarker } from '../utils/createMarker'; // Import createMarker
 import { io } from 'socket.io-client';
 

@@ -1,5 +1,5 @@
 import { updateCatchDisplay } from '../utils/textUtils';
-import { playAction } from '../components/player';
+import { playAction, playOnce } from '../controllers/player';
 
 export function detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket) {
     balls.forEach(ball => {
@@ -14,10 +14,10 @@ export function detectCollisions(balls, players, scene, world, markers, broadcas
                 console.log(`Collision detected between player ${p.mesh.name} and ball ${ball.id}`);
                 if (ball.hitGround) {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playAction('pickup'); // Play pickup animation
+                    playOnce('pickup'); // Play pickup animation once
                 } else {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playAction('catch'); // Play catch animation
+                    playOnce('catch'); // Play catch animation once
                 }
             }
         });

@@ -3,7 +3,7 @@ import { initializeSocket, handleEvents, socket } from '../core/networking';
 import { setupEventHandlers } from '../handlers/events';
 import { createMarker } from '../utils/createMarker';
 import { Raycaster, Vector3 } from 'three';
-import { createPlayer } from '../components/player';
+import { createPlayer } from '../controllers/player';
 import { onWindowResize } from '../utils/window';
 
 export async function initializeGame() {

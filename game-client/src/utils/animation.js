@@ -9,7 +9,7 @@ let mixer;
 
 export async function setupAnimationModels(scene) {
     try {
-        const modelUrl = 'iron_man.glb';
+        const modelUrl = 'man.glb';
         const fullUrl = publicDir + 'models/' + modelUrl;
         console.log('Fetching model from URL:', fullUrl);
 
@@ -41,6 +41,7 @@ async function loadAnimations(mixer) {
             'run.glb',
             'pickup.glb',
             'catch.glb',
+            'throw.glb'
         ];
 
         for (const url of animGlbs) {
@@ -69,7 +70,7 @@ export function playAction(actionName) {
     const action = AllActions[actionName];
     if (action) {
         console.log(`Playing action: ${actionName}`);
-        action.reset().fadeIn(0.5).play();
+        action.reset().fadeIn(0.1).play();
         action.paused = false;
         action.loop = THREE.LoopRepeat
         if (currentActionName && currentActionName !== actionName) {
@@ -106,7 +107,7 @@ export function playOnce(actionName) {
     if (action) {
         action.reset().fadeIn(0.5).play();
         action.paused = false;
-        action.clampWhenFinished = true;
+        action.clampWhenFinished = false;
         action.loop = THREE.LoopOnce;
 
         action.onFinished = () => {

@@ -1,4 +1,4 @@
-import { updatePlayerState, renderBalls, updateAnimation } from '../components/player';
+import { updatePlayerState, renderBalls, updateAnimation } from '../controllers/player';
 import { updatePhysics } from '../utils/environment';
 import { detectCollisions, handleBallCatch, handleBallTouchGround } from '../handlers/collision';
 import { updateMarkers } from '../handlers/markerUpdate';

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playAction, playOnce } from '../controllers/player';
 
 function setupKeyboardEventHandlers(input) {
     const keyDownHandler = (event) => {
@@ -39,6 +40,7 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
         chargeStartTime = Date.now();
     };
 
+
     const mouseUpHandler = (event) => {
         if (!isCharging) return;
         isCharging = false;
@@ -74,22 +76,31 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
 
         const velocity = direction.multiplyScalar(throwPower * chargeFactor);
 
-        const ballData = {
-            id: socket.id + Date.now().toString(),
-            position: { x: player.mesh.position.x, y: player.mesh.position.y + 1.0, z: player.mesh.position.z },
-            rotation: { _x: player.mesh.rotation.x, _y: player.mesh.rotation.y, _z: player.mesh.rotation.z },
-            velocity: { x: velocity.x, y: velocity.y, z: velocity.z },
-            thrower: socket.id,
-            initialPosition: player.mesh.position.clone()
-        };
+        // Make the character face the throw direction
+        player.char_model.rotation.y = Math.atan2(direction.x, direction.z);
 
-        console.log('Emitting ballThrown event:', ballData);
-        socket.emit('ballThrown', ballData);
+        // Play throw animation
+        playOnce('throw');
 
-        player.canThrow = false;
+        // Delay the throw event to sync with the throw animation
         setTimeout(() => {
-            player.canThrow = true;
-        }, 2000);
+            const ballData = {
+                id: socket.id + Date.now().toString(),
+                position: { x: player.mesh.position.x, y: player.mesh.position.y + 1.0, z: player.mesh.position.z },
+                rotation: { _x: player.mesh.rotation.x, _y: player.mesh.rotation.y, _z: player.mesh.rotation.z },
+                velocity: { x: velocity.x, y: velocity.y, z: velocity.z },
+                thrower: socket.id,
+                initialPosition: player.mesh.position.clone()
+            };
+
+            console.log('Emitting ballThrown event:', ballData);
+            socket.emit('ballThrown', ballData);
+
+            player.canThrow = false;
+            setTimeout(() => {
+                player.canThrow = true;
+            }, 2000);
+        }, 750); // Adjust the delay as needed to sync with the throw animation
     };
 
     window.addEventListener('mousedown', mouseDownHandler);

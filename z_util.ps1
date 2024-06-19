@@ -1,6 +1,6 @@
 $outputFile = 'all_scripts.md'
 $directories = @(
-    '.\game-client\src\components\',
+    '.\game-client\src\controllers\',
     '.\game-client\src\',
     '.\game-client\src\core\',
     '.\game-client\src\utils\',
