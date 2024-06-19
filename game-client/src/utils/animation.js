@@ -9,7 +9,7 @@ let mixer;
 
 export async function setupAnimationModels(scene) {
     try {
-        const modelUrl = 'iron_man.glb';  // Update to your model file name
+        const modelUrl = 'iron_man.glb';
         const fullUrl = publicDir + 'models/' + modelUrl;
         console.log('Fetching model from URL:', fullUrl);
 
