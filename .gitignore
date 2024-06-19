@@ -2,6 +2,11 @@
 
 game-client/node_modules
 game-server/node_modules
+test/node_modules
+assets
+*.fbx
+*.glb
+
 
 # Logs
 logs

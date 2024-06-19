@@ -2,6 +2,7 @@
 
 - [Play Catch](#play-catch)
   - [Project Overview](#project-overview)
+  - [Mixamo Model Stuff](#mixamo-model-stuff)
     - [Folder Structure](#folder-structure)
   - [Links](#links)
   - [Install](#install)
@@ -20,6 +21,10 @@
 
 Browser experience with websockets and threejs.
 
+
+## Mixamo Model Stuff
+
+[Converter](https://github.com/vis-prime/BlenderMixamo2glTFConverter)
 ### Folder Structure
 
 Created with showtree "C:/Scripts/Show-Tree.ps":
