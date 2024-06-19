@@ -1,4 +1,3 @@
-// game-client\src\utils\textUtils.js
 import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
@@ -24,6 +23,11 @@ export function createTextMesh(text, position, scene) {
 }
 
 export function updateCatchDisplay(throwerId, throwPosition, catchPosition, count, scene) {
+    if (!throwPosition || !catchPosition) {
+        console.error('Invalid throw or catch position:', throwPosition, catchPosition);
+        return;
+    }
+
     const midPoint = new THREE.Vector3().addVectors(throwPosition, catchPosition).multiplyScalar(0.5);
     createTextMesh(count.toString(), midPoint, scene);
 }

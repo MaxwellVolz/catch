@@ -110,34 +110,6 @@ export function updateAnimation(deltaTime) {
 }
 
 export { playAction, playOnce };
-
-export function createBall(id, position, rotation, velocity, world, thrower) {
-    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
-    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    const mesh = new THREE.Mesh(geometry, material);
-
-    const ballPosition = position.clone();
-    ballPosition.y += 1;
-    mesh.position.copy(ballPosition);
-    mesh.rotation.copy(rotation);
-
-    const shape = new Sphere(0.5);
-    const body = new Body({ mass: 0.05, position: ballPosition });
-    body.addShape(shape);
-    body.velocity.set(velocity.x, velocity.y, velocity.z);
-    world.addBody(body);
-
-    return {
-        id,
-        mesh,
-        body,
-        thrower,
-        update() {
-            this.mesh.position.copy(this.body.position);
-            this.mesh.quaternion.copy(this.body.quaternion);
-        }
-    };
-}
 ```
 
 'C:\Users\narfa\Documents\_git\catch\game-client\src\components\playerMovement.js'
@@ -288,8 +260,6 @@ export async function initializeGame() {
             backward: false,
             left: false,
             right: false,
-            turnLeft: false,
-            turnRight: false
         };
 
         setupEventHandlers(input, player, raycaster, mouse, camera, renderer, socket, balls, player.canThrow, false, 0, 0);
@@ -510,6 +480,7 @@ export function playAction(actionName) {
         console.log(`Playing action: ${actionName}`);
         action.reset().fadeIn(0.5).play();
         action.paused = false;
+        action.loop = THREE.LoopRepeat
         if (currentActionName && currentActionName !== actionName) {
             const currentAction = AllActions[currentActionName];
             if (currentAction) {
@@ -645,7 +616,7 @@ export function initEnvironment() {
     world.gravity.set(0, -9.82, 0);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 25, 25);
+    camera.position.set(0, 15, 15);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer();
@@ -885,7 +856,6 @@ export function handleBallTouchGround(ballId, balls, players) {
 'C:\Users\narfa\Documents\_git\catch\game-client\src\handlers\events.js'
 
 ```js
-// game-client/src/utils/eventHandlers.js
 import * as THREE from 'three';
 
 function setupKeyboardEventHandlers(input) {
@@ -894,8 +864,6 @@ function setupKeyboardEventHandlers(input) {
         if (event.key === 's') input.backward = true;
         if (event.key === 'a') input.left = true;
         if (event.key === 'd') input.right = true;
-        if (event.key === 'q') input.turnLeft = true;
-        if (event.key === 'e') input.turnRight = true;
     });
 
     window.addEventListener('keyup', (event) => {
@@ -903,8 +871,6 @@ function setupKeyboardEventHandlers(input) {
         if (event.key === 's') input.backward = false;
         if (event.key === 'a') input.left = false;
         if (event.key === 'd') input.right = false;
-        if (event.key === 'q') input.turnLeft = false;
-        if (event.key === 'e') input.turnRight = false;
     });
 }
 
@@ -970,7 +936,7 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
 
 export function setupEventHandlers(input, player, raycaster, mouse, camera, renderer, socket, balls, canThrow, isCharging, chargeStartTime, chargeEndTime) {
     setupKeyboardEventHandlers(input);
-    setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, socket, balls, canThrow, isCharging, chargeStartTime, chargeEndTime);
+    setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, socket, balls);
 }
 ```
 

@@ -35,6 +35,7 @@ export async function createPlayer(scene, world) {
         return player;
     } catch (error) {
         console.error('Error creating player:', error);
+        return null;
     }
 }
 

@@ -1,47 +1,56 @@
 import { initEnvironment } from '../utils/environment';
-import { initializeSocket, handleEvents, socket } from '../core/networking';
+import { initializeSocket, handleEvents, socket } from '../core/networking'; // Import socket here
 import { setupEventHandlers } from '../handlers/events';
-import { createMarker } from '../utils/createMarker';
-import { Raycaster, Vector3 } from 'three';
-import * as THREE from 'three';
 import { createPlayer } from '../components/player';
 import { onWindowResize } from '../utils/window';
+import { Raycaster, Vector3 } from 'three';
+import * as THREE from 'three';
+
+async function setupPlayer(scene, world) {
+    const player = await createPlayer(scene, world);
+    if (!player || !player.mesh) {
+        throw new Error('Failed to create player or player mesh is missing');
+    }
+    player.canThrow = true;
+    player.catchCount = 0;
+    return player;
+}
+
+function setupGameEntities(scene, camera, renderer, world) {
+    const players = {};
+    const balls = [];
+    const markers = new Map();
+    const raycaster = new Raycaster();
+    const mouse = new THREE.Vector3();
+    const input = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+    };
+
+    return { players, balls, markers, raycaster, mouse, input };
+}
 
 export async function initializeGame() {
     try {
         const { scene, camera, renderer, world } = initEnvironment();
-        const player = await createPlayer(scene, world);
+        const player = await setupPlayer(scene, world);
+        const entities = setupGameEntities(scene, camera, renderer, world);
 
-        if (!player || !player.mesh) {
-            throw new Error('Player or player.mesh is not defined');
-        }
+        // Initialize socket and set up players
+        initializeSocket(scene, player, entities.balls, world, entities.markers);
+        entities.players[socket.id] = player; // Ensure socket is defined before using it
 
-        player.canThrow = true;
-        player.catchCount = 0;
-        const players = {};
-        players[socket.id] = player;
-        const balls = []; // Ensure balls is an array
-        const markers = new Map();
-        const raycaster = new Raycaster();
-        const mouse = new THREE.Vector3();
-        const ballMap = new Map();
+        // Setup event handlers after socket initialization
+        setupEventHandlers(entities.input, player, entities.raycaster, entities.mouse, camera, renderer, socket, entities.balls);
+        handleEvents(scene, player, entities.balls, world, entities.players);
 
-        const input = {
-            forward: false,
-            backward: false,
-            left: false,
-            right: false,
+        onWindowResize(camera, renderer); // Handle window resize events
+
+        return {
+            scene, camera, renderer, world, player, ...entities
         };
-
-        setupEventHandlers(input, player, raycaster, mouse, camera, renderer, socket, balls, player.canThrow, false, 0, 0);
-
-        initializeSocket(scene, player, balls, world, markers, createMarker, players);
-        handleEvents(scene, player, balls, world, players);
-
-        // Handle window resize
-        onWindowResize(camera, renderer);
-
-        return { scene, camera, renderer, world, player, players, balls, markers, raycaster, mouse, ballMap, input };
     } catch (error) {
         console.error('Error initializing game:', error);
         return null;

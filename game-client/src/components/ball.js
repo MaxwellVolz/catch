@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { Body, Sphere } from 'cannon-es';
 
@@ -10,6 +9,9 @@ export function createBall(id, position, rotation, velocity, world, thrower) {
     const ballPosition = position.clone();
     ballPosition.y += 1;
     mesh.position.copy(ballPosition);
+
+    // Ensure rotation order is set correctly
+    rotation.order = 'XYZ';
     mesh.rotation.copy(rotation);
 
     const shape = new Sphere(0.5);
@@ -23,6 +25,7 @@ export function createBall(id, position, rotation, velocity, world, thrower) {
         mesh,
         body,
         thrower,
+        initialPosition: position.clone(), // Ensure initial position is set
         update() {
             this.mesh.position.copy(this.body.position);
             this.mesh.quaternion.copy(this.body.quaternion);

@@ -4,6 +4,11 @@ import { playAction } from '../components/player';
 export function detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket) {
     balls.forEach(ball => {
         Object.values(players).forEach(p => {
+            if (!p.mesh || !ball.mesh) {
+                console.error('Player mesh or ball mesh is undefined');
+                return;
+            }
+
             const distance = p.mesh.position.distanceTo(ball.mesh.position);
             if (distance < 1.5) {
                 console.log(`Collision detected between player ${p.mesh.name} and ball ${ball.id}`);
@@ -48,10 +53,16 @@ export function handleBallCatch(ballId, catcher, balls, scene, markers, world, p
 
     console.log(`Ball caught by player ${catcher.mesh.name}, thrown by player ${ball.thrower}`);
 
+    // Ensure that the initial position and catch position are valid
+    if (ball.initialPosition && catcher.mesh.position) {
+        updateCatchDisplay(ball.thrower, ball.initialPosition, catcher.mesh.position, catcher.catchCount, scene);
+    } else {
+        console.error('Invalid initial or catch position:', ball.initialPosition, catcher.mesh.position);
+    }
+
     if (players[ball.thrower]) {
         catcher.catchCount++;
         players[ball.thrower].catchCount = catcher.catchCount;
-        updateCatchDisplay(ball.thrower, ball.initialPosition, catcher.mesh.position, catcher.catchCount, scene);
     }
 
     socket.emit('catchUpdate', {

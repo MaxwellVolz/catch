@@ -4,25 +4,35 @@ import { detectCollisions, handleBallCatch, handleBallTouchGround } from '../han
 import { updateMarkers } from '../handlers/markerUpdate';
 import { broadcastBallRemoval, socket } from '../core/networking';
 
-export function gameLoop(player, input, world, balls, scene, players, markers, camera) {
+function gameLoopInitializationCheck(player) {
     if (!player || !player.mesh) {
-        console.error('Player or player.mesh is undefined in gameLoop', player);
-        return;
+        console.error('Player or player.mesh is undefined at game loop start', player);
+        return false;
     }
+    return true;
+}
+
+export function gameLoop(player, input, world, balls, scene, players, markers, camera) {
+    if (!gameLoopInitializationCheck(player)) return;
 
     let lastTime = performance.now();
 
     const loop = () => {
         const currentTime = performance.now();
-        const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+        const deltaTime = (currentTime - lastTime) / 1000; // Convert milliseconds to seconds
         lastTime = currentTime;
 
-        updatePlayerState(player, input, camera);
-        updatePhysics(world, balls);
-        renderBalls(scene, balls);
-        detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket);
-        updateMarkers(balls, markers);
-        updateAnimation(deltaTime);
+        try {
+            updatePlayerState(player, input, camera);
+            updatePhysics(world, balls);
+            renderBalls(scene, balls);
+            detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket);
+            updateMarkers(balls, markers);
+            updateAnimation(deltaTime);
+        } catch (error) {
+            console.error('Error during game loop:', error);
+            return; // Optionally add a mechanism to restart or recover the game loop
+        }
 
         requestAnimationFrame(loop);
     };

@@ -14,45 +14,59 @@ const io = new Server(server, {
     }
 });
 
-let players = [];
-let balls = [];
+let players = {};
+let balls = {};
 
 io.on('connection', (socket) => {
-    console.log('A player connected');
+    console.log('A player connected: ' + socket.id);
 
     socket.on('playerUpdate', (data) => {
-        const existingPlayer = players.find(player => player.id === data.id);
-        if (existingPlayer) {
-            existingPlayer.position = data.position;
-        } else {
-            players.push(data);
+        if (!data || !data.id || !data.position) {
+            console.error('Invalid player update data received:', data);
+            return;
         }
 
-        io.emit('playerUpdate', players);
+        players[socket.id] = data;
+        io.emit('playerUpdate', Object.values(players));
     });
 
     socket.on('ballThrown', (data) => {
-        console.log('Received ballThrown event:', data);
-        balls.push(data);
+        if (!data || !data.id || !data.position || !data.rotation || !data.velocity) {
+            console.error('Invalid ball thrown data received:', data);
+            return;
+        }
+
+        balls[data.id] = data;
         io.emit('ballThrown', data);
     });
 
     socket.on('ballRemoved', (data) => {
-        console.log('Received ballRemoved event:', data);
-        balls = balls.filter(ball => ball.id !== data.id);
+        if (!data || !data.id) {
+            console.error('Invalid ball removed data received:', data);
+            return;
+        }
+
+        delete balls[data.id];
         io.emit('ballRemoved', data);
     });
 
     socket.on('catchUpdate', (data) => {
-        console.log('Catch update received:', data);
-        io.emit('catchUpdate', data);
+        if (!data || !data.catcherId || !data.catchCount) {
+            console.error('Invalid catch update data received:', data);
+            return;
+        }
+
+        if (players[data.catcherId]) {
+            players[data.catcherId].catchCount = data.catchCount;
+            io.emit('catchUpdate', data);
+        }
     });
 
     socket.on('disconnect', () => {
-        console.log('A player disconnected');
-        players = players.filter(player => player.id !== socket.id);
-        io.emit('playerDisconnected', { id: socket.id }); // Emit disconnection event
-        io.emit('playerUpdate', players);
+        delete players[socket.id];
+        console.log(`Player disconnected: ${socket.id}`);
+        io.emit('playerDisconnected', { id: socket.id });
+        io.emit('playerUpdate', Object.values(players));
     });
 });
 
