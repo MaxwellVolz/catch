@@ -21,7 +21,7 @@ io.on('connection', (socket) => {
     console.log('A player connected: ' + socket.id);
 
     socket.on('playerUpdate', (data) => {
-        if (!data || !data.id || !data.position) {
+        if (!data || !data.id || !data.position || !data.rotation || !data.currentAction) {
             console.error('Invalid player update data received:', data);
             return;
         }

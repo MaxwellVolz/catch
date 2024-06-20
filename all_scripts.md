@@ -65,13 +65,14 @@ export async function createPlayer(scene, world) {
             body,
             char_model: model,
             velocity: new THREE.Vector3(),
-            currentAction: 'run'  // Set the default action to 'run'
+            currentAction: 'run',
+            actions // Ensure actions are correctly set here
         };
 
         player.mesh.add(player.char_model);
         scene.add(player.mesh);
 
-        playAction('run');  // Play the default run animation
+        playAction('run', player);  // Play the default run animation
 
         console.log('Player created:', player);
 
@@ -86,12 +87,12 @@ export function updatePlayerState(player, input, camera) {
 
     if (moving) {
         if (player.currentAction !== 'run') {
-            playAction('run');
+            playAction('run', player);
             player.currentAction = 'run';
         }
     } else {
         if (player.currentAction !== 'idle') {
-            playAction('idle');
+            playAction('idle', player);
             player.currentAction = 'idle';
         }
     }
@@ -107,7 +108,7 @@ export function renderBalls(scene, balls) {
 }
 
 export function updateAnimation(deltaTime) {
-    updateMixer(deltaTime);
+    updateMixer(deltaTime, mixer);
 }
 
 export { playAction, playOnce };
@@ -301,14 +302,15 @@ export async function initializeGame() {
 import * as THREE from 'three';
 import { createBall } from '../controllers/ball';
 import { createMarker } from '../utils/createMarker'; // Import createMarker
+import { setupAnimationModels, playAction } from '../utils/animation';
 import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3000');
 const ballMap = new Map();
 const playerBallMap = new Map(); // Map to track which ball belongs to which player
 
-function handlePlayerUpdates(socket, players, scene) {
-    socket.on('playerUpdate', (data) => {
+async function handlePlayerUpdates(socket, players, scene) {
+    socket.on('playerUpdate', async (data) => {
         if (!data || !Array.isArray(data)) {
             console.error('Invalid player update data received:', data);
             return;
@@ -316,33 +318,47 @@ function handlePlayerUpdates(socket, players, scene) {
 
         console.log('Player update data received:', data);
 
-        data.forEach(update => {
+        for (const update of data) {
             if (!update || !update.id || !update.position) {
                 console.error('Invalid player update received:', update);
-                return;
+                continue;
             }
 
             if (update.id !== socket.id) {
                 let otherPlayer = players[update.id];
                 if (!otherPlayer) {
                     console.log('Creating new player for ID:', update.id);
-                    const geometry = new THREE.BoxGeometry(1, 1, 1);
-                    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.copy(update.position);
-                    otherPlayer = { mesh, catchCount: 0, canThrow: true };
+
+                    const { model, mixer, animations } = await setupAnimationModels(scene);
+                    const playerMesh = new THREE.Object3D();
+                    playerMesh.add(model);
+                    playerMesh.position.copy(update.position);
+
+                    otherPlayer = {
+                        mesh: playerMesh,
+                        mixer,
+                        actions: animations,
+                        catchCount: 0,
+                        canThrow: true,
+                        currentAction: 'run'
+                    };
+
+                    playAction('run', otherPlayer);  // Play the default run animation
+
                     players[update.id] = otherPlayer;
-                    scene.add(mesh);
+                    scene.add(playerMesh);
                 } else {
                     console.log('Updating player position for ID:', update.id);
                     if (otherPlayer.mesh) {
                         otherPlayer.mesh.position.copy(update.position);
+                        otherPlayer.mesh.rotation.copy(update.rotation);
+                        // otherPlayer.currentAction.copy(update.currentAction);
                     } else {
                         console.error('Player mesh is undefined for ID:', update.id);
                     }
                 }
             }
-        });
+        }
 
         // Log the current state of players
         console.log('Current state of players:', players);
@@ -457,7 +473,9 @@ function handleEvents(scene, player, balls, world, players) {
         if (player && player.mesh && player.mesh.position) {
             socket.emit('playerUpdate', {
                 id: socket.id,
-                position: player.mesh.position
+                position: player.mesh.position,
+                rotation: player.mesh.rotation,
+                currentAction: player.currentAction,
             });
         }
     }
@@ -480,14 +498,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 
 const gltfLoader = new GLTFLoader();
-const AllActions = {};
 const publicDir = '/assets/';
-let currentActionName = '';
-let mixer;
 
 export async function setupAnimationModels(scene) {
     try {
-        const modelUrl = 'iron_man.glb';
+        const modelUrl = 'man.glb';
         const fullUrl = publicDir + 'models/' + modelUrl;
         console.log('Fetching model from URL:', fullUrl);
 
@@ -503,7 +518,7 @@ export async function setupAnimationModels(scene) {
 
         scene.add(model);
 
-        mixer = new THREE.AnimationMixer(model);
+        const mixer = new THREE.AnimationMixer(model);
         const animations = await loadAnimations(mixer);
         return { model, mixer, animations };
     } catch (error) {
@@ -519,7 +534,10 @@ async function loadAnimations(mixer) {
             'run.glb',
             'pickup.glb',
             'catch.glb',
+            'throw.glb'
         ];
+
+        const actions = {};
 
         for (const url of animGlbs) {
             const fullUrl = publicDir + 'anims/' + url;
@@ -530,40 +548,44 @@ async function loadAnimations(mixer) {
             const actionName = url.split('.')[0];
             const action = mixer.clipAction(clip);
             action.loop = (actionName === 'idle' || actionName === 'run') ? THREE.LoopRepeat : THREE.LoopOnce;
-            AllActions[actionName] = action;
+            actions[actionName] = action;
             console.log(`Loaded animation: ${actionName}, duration: ${clip.duration}`);
         }
 
-        console.log('All loaded actions:', Object.keys(AllActions));
-        return AllActions;
+        console.log('All loaded actions:', Object.keys(actions));
+        return actions;
     } catch (error) {
         console.error('Error loading animations:', error);
         throw error;
     }
 }
 
-export function playAction(actionName) {
+export function playAction(actionName, player) {
     console.log(`Attempting to play action: ${actionName}`);
-    const action = AllActions[actionName];
+    if (!player.actions) {
+        console.error('Player actions are undefined');
+        return;
+    }
+
+    const action = player.actions[actionName];
     if (action) {
         console.log(`Playing action: ${actionName}`);
-        action.reset().fadeIn(0.5).play();
+        action.reset().fadeIn(0.1).play();
         action.paused = false;
-        action.loop = THREE.LoopRepeat
-        if (currentActionName && currentActionName !== actionName) {
-            const currentAction = AllActions[currentActionName];
+        if (player.currentAction && player.currentAction !== actionName) {
+            const currentAction = player.actions[player.currentAction];
             if (currentAction) {
                 currentAction.fadeOut(0.5);
                 currentAction.paused = true;
             }
         }
-        currentActionName = actionName;
+        player.currentAction = actionName;
     } else {
         console.error(`Action not found: ${actionName}`);
     }
 }
 
-export function updateMixer(deltaTime) {
+export function updateMixer(deltaTime, mixer) {
     if (mixer) {
         mixer.update(deltaTime);
     } else {
@@ -571,25 +593,30 @@ export function updateMixer(deltaTime) {
     }
 }
 
-export function resetAction(actionName) {
-    const action = AllActions[actionName];
+export function resetAction(actionName, actions) {
+    const action = actions[actionName];
     if (action) {
         action.stop();
     }
 }
 
-export function playOnce(actionName) {
+export function playOnce(actionName, player) {
     console.log(`Attempting to play action once: ${actionName}`);
-    const action = AllActions[actionName];
+    if (!player.actions) {
+        console.error('Player actions are undefined');
+        return;
+    }
+
+    const action = player.actions[actionName];
     if (action) {
         action.reset().fadeIn(0.5).play();
         action.paused = false;
-        action.clampWhenFinished = true;
+        action.clampWhenFinished = false;
         action.loop = THREE.LoopOnce;
 
         action.onFinished = () => {
-            resetAction(actionName);
-            playAction('idle');
+            resetAction(actionName, player.actions);
+            playAction('idle', player);
         };
     } else {
         console.error(`Action not found: ${actionName}`);
@@ -849,7 +876,7 @@ export function onWindowResize(camera, renderer) {
 
 ```js
 import { updateCatchDisplay } from '../utils/textUtils';
-import { playAction } from '../controllers/player';
+import { playAction, playOnce } from '../controllers/player';
 
 export function detectCollisions(balls, players, scene, world, markers, broadcastBallRemoval, handleBallCatch, handleBallTouchGround, socket) {
     balls.forEach(ball => {
@@ -864,10 +891,10 @@ export function detectCollisions(balls, players, scene, world, markers, broadcas
                 console.log(`Collision detected between player ${p.mesh.name} and ball ${ball.id}`);
                 if (ball.hitGround) {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playAction('pickup'); // Play pickup animation
+                    playOnce('pickup', players); // Play pickup animation once
                 } else {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playAction('catch'); // Play catch animation
+                    playOnce('catch', p); // Play catch animation once
                 }
             }
         });
@@ -928,7 +955,7 @@ export function handleBallTouchGround(ballId, balls, players) {
     const ball = balls.find(b => b.id === ballId);
     if (!ball) return;
 
-    console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
+    // console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
     ball.hitGround = true;
 
     if (players[ball.thrower]) {
@@ -941,6 +968,7 @@ export function handleBallTouchGround(ballId, balls, players) {
 
 ```js
 import * as THREE from 'three';
+import { playAction, playOnce } from '../controllers/player';
 
 function setupKeyboardEventHandlers(input) {
     const keyDownHandler = (event) => {
@@ -981,6 +1009,7 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
         chargeStartTime = Date.now();
     };
 
+
     const mouseUpHandler = (event) => {
         if (!isCharging) return;
         isCharging = false;
@@ -1016,22 +1045,31 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
 
         const velocity = direction.multiplyScalar(throwPower * chargeFactor);
 
-        const ballData = {
-            id: socket.id + Date.now().toString(),
-            position: { x: player.mesh.position.x, y: player.mesh.position.y + 1.0, z: player.mesh.position.z },
-            rotation: { _x: player.mesh.rotation.x, _y: player.mesh.rotation.y, _z: player.mesh.rotation.z },
-            velocity: { x: velocity.x, y: velocity.y, z: velocity.z },
-            thrower: socket.id,
-            initialPosition: player.mesh.position.clone()
-        };
+        // Make the character face the throw direction
+        player.char_model.rotation.y = Math.atan2(direction.x, direction.z);
 
-        console.log('Emitting ballThrown event:', ballData);
-        socket.emit('ballThrown', ballData);
+        // Play throw animation
+        playOnce('throw', player);
 
-        player.canThrow = false;
+        // Delay the throw event to sync with the throw animation
         setTimeout(() => {
-            player.canThrow = true;
-        }, 2000);
+            const ballData = {
+                id: socket.id + Date.now().toString(),
+                position: { x: player.mesh.position.x, y: player.mesh.position.y + 1.0, z: player.mesh.position.z },
+                rotation: { _x: player.mesh.rotation.x, _y: player.mesh.rotation.y, _z: player.mesh.rotation.z },
+                velocity: { x: velocity.x, y: velocity.y, z: velocity.z },
+                thrower: socket.id,
+                initialPosition: player.mesh.position.clone()
+            };
+
+            console.log('Emitting ballThrown event:', ballData);
+            socket.emit('ballThrown', ballData);
+
+            player.canThrow = false;
+            setTimeout(() => {
+                player.canThrow = true;
+            }, 2000);
+        }, 750); // Adjust the delay as needed to sync with the throw animation
     };
 
     window.addEventListener('mousedown', mouseDownHandler);

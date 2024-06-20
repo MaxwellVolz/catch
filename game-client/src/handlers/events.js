@@ -80,7 +80,7 @@ function setupMouseEventHandlers(player, raycaster, mouse, camera, renderer, soc
         player.char_model.rotation.y = Math.atan2(direction.x, direction.z);
 
         // Play throw animation
-        playOnce('throw');
+        playOnce('throw', player);
 
         // Delay the throw event to sync with the throw animation
         setTimeout(() => {

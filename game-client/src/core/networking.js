@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { createBall } from '../controllers/ball';
-import { createMarker } from '../utils/createMarker'; // Import createMarker
+import { createMarker } from '../utils/createMarker';
+import { setupAnimationModels, playAction } from '../utils/animation';
 import { io } from 'socket.io-client';
 
 const socket = io('http://localhost:3000');
 const ballMap = new Map();
 const playerBallMap = new Map(); // Map to track which ball belongs to which player
 
-function handlePlayerUpdates(socket, players, scene) {
-    socket.on('playerUpdate', (data) => {
+async function handlePlayerUpdates(socket, players, scene) {
+    socket.on('playerUpdate', async (data) => {
         if (!data || !Array.isArray(data)) {
             console.error('Invalid player update data received:', data);
             return;
@@ -16,36 +17,54 @@ function handlePlayerUpdates(socket, players, scene) {
 
         console.log('Player update data received:', data);
 
-        data.forEach(update => {
-            if (!update || !update.id || !update.position) {
+        for (const update of data) {
+            if (!update || !update.id || !update.position || !update.rotation || !update.currentAction) {
                 console.error('Invalid player update received:', update);
-                return;
+                continue;
             }
 
             if (update.id !== socket.id) {
                 let otherPlayer = players[update.id];
                 if (!otherPlayer) {
                     console.log('Creating new player for ID:', update.id);
-                    const geometry = new THREE.BoxGeometry(1, 1, 1);
-                    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.copy(update.position);
-                    otherPlayer = { mesh, catchCount: 0, canThrow: true };
+
+                    const { model, mixer, animations } = await setupAnimationModels(scene);
+                    const playerMesh = new THREE.Object3D();
+                    playerMesh.add(model);
+                    playerMesh.position.copy(update.position);
+                    playerMesh.rotation.set(update.rotation.x, update.rotation.y, update.rotation.z);
+
+                    otherPlayer = {
+                        mesh: playerMesh,
+                        mixer,
+                        actions: animations,
+                        catchCount: 0,
+                        canThrow: true,
+                        currentAction: update.currentAction
+                    };
+
+                    playAction(update.currentAction, otherPlayer);
+
                     players[update.id] = otherPlayer;
-                    scene.add(mesh);
+                    scene.add(playerMesh);
                 } else {
-                    console.log('Updating player position for ID:', update.id);
+                    console.log('Updating player position and rotation for ID:', update.id);
                     if (otherPlayer.mesh) {
                         otherPlayer.mesh.position.copy(update.position);
+                        otherPlayer.mesh.rotation.set(update.rotation.x, update.rotation.y, update.rotation.z);
+                        if (otherPlayer.currentAction !== update.currentAction) {
+                            playAction(update.currentAction, otherPlayer);
+                            otherPlayer.currentAction = update.currentAction;
+                        }
                     } else {
                         console.error('Player mesh is undefined for ID:', update.id);
                     }
                 }
             }
-        });
+        }
 
         // Log the current state of players
-        console.log('Current state of players:', players);
+        // console.log('Current state of players:', players);
     });
 
     socket.on('playerDisconnected', (data) => {
@@ -157,7 +176,13 @@ function handleEvents(scene, player, balls, world, players) {
         if (player && player.mesh && player.mesh.position) {
             socket.emit('playerUpdate', {
                 id: socket.id,
-                position: player.mesh.position
+                position: player.mesh.position,
+                rotation: {
+                    x: player.mesh.rotation.x,
+                    y: player.mesh.rotation.y,
+                    z: player.mesh.rotation.z
+                },
+                currentAction: player.currentAction,
             });
         }
     }

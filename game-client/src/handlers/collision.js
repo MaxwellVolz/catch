@@ -14,17 +14,17 @@ export function detectCollisions(balls, players, scene, world, markers, broadcas
                 console.log(`Collision detected between player ${p.mesh.name} and ball ${ball.id}`);
                 if (ball.hitGround) {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playOnce('pickup'); // Play pickup animation once
+                    playOnce('pickup', players); // Play pickup animation once
                 } else {
                     handleBallCatch(ball.id, p, balls, scene, markers, world, players, broadcastBallRemoval, socket);
-                    playOnce('catch'); // Play catch animation once
+                    playOnce('catch', p); // Play catch animation once
                 }
             }
         });
 
         // Check if the ball touches the ground
         if (ball.mesh.position.y <= 0.5) {
-            console.log(`Ball ${ball.id} touched the ground`);
+            // console.log(`Ball ${ball.id} touched the ground`);
             handleBallTouchGround(ball.id, balls, players);
         }
     });
@@ -78,7 +78,7 @@ export function handleBallTouchGround(ballId, balls, players) {
     const ball = balls.find(b => b.id === ballId);
     if (!ball) return;
 
-    console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
+    // console.log(`Ball thrown by player ${ball.thrower} hit the ground`);
     ball.hitGround = true;
 
     if (players[ball.thrower]) {

@@ -2,10 +2,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 
 const gltfLoader = new GLTFLoader();
-const AllActions = {};
 const publicDir = '/assets/';
-let currentActionName = '';
-let mixer;
 
 export async function setupAnimationModels(scene) {
     try {
@@ -25,7 +22,7 @@ export async function setupAnimationModels(scene) {
 
         scene.add(model);
 
-        mixer = new THREE.AnimationMixer(model);
+        const mixer = new THREE.AnimationMixer(model);
         const animations = await loadAnimations(mixer);
         return { model, mixer, animations };
     } catch (error) {
@@ -44,6 +41,8 @@ async function loadAnimations(mixer) {
             'throw.glb'
         ];
 
+        const actions = {};
+
         for (const url of animGlbs) {
             const fullUrl = publicDir + 'anims/' + url;
             console.log('Fetching animation from URL:', fullUrl);
@@ -53,40 +52,44 @@ async function loadAnimations(mixer) {
             const actionName = url.split('.')[0];
             const action = mixer.clipAction(clip);
             action.loop = (actionName === 'idle' || actionName === 'run') ? THREE.LoopRepeat : THREE.LoopOnce;
-            AllActions[actionName] = action;
+            actions[actionName] = action;
             console.log(`Loaded animation: ${actionName}, duration: ${clip.duration}`);
         }
 
-        console.log('All loaded actions:', Object.keys(AllActions));
-        return AllActions;
+        console.log('All loaded actions:', Object.keys(actions));
+        return actions;
     } catch (error) {
         console.error('Error loading animations:', error);
         throw error;
     }
 }
 
-export function playAction(actionName) {
+export function playAction(actionName, player) {
     console.log(`Attempting to play action: ${actionName}`);
-    const action = AllActions[actionName];
+    if (!player.actions) {
+        console.error('Player actions are undefined');
+        return;
+    }
+
+    const action = player.actions[actionName];
     if (action) {
         console.log(`Playing action: ${actionName}`);
         action.reset().fadeIn(0.1).play();
         action.paused = false;
-        action.loop = THREE.LoopRepeat
-        if (currentActionName && currentActionName !== actionName) {
-            const currentAction = AllActions[currentActionName];
+        if (player.currentAction && player.currentAction !== actionName) {
+            const currentAction = player.actions[player.currentAction];
             if (currentAction) {
                 currentAction.fadeOut(0.5);
                 currentAction.paused = true;
             }
         }
-        currentActionName = actionName;
+        player.currentAction = actionName;
     } else {
         console.error(`Action not found: ${actionName}`);
     }
 }
 
-export function updateMixer(deltaTime) {
+export function updateMixer(deltaTime, mixer) {
     if (mixer) {
         mixer.update(deltaTime);
     } else {
@@ -94,16 +97,21 @@ export function updateMixer(deltaTime) {
     }
 }
 
-export function resetAction(actionName) {
-    const action = AllActions[actionName];
+export function resetAction(actionName, actions) {
+    const action = actions[actionName];
     if (action) {
         action.stop();
     }
 }
 
-export function playOnce(actionName) {
+export function playOnce(actionName, player) {
     console.log(`Attempting to play action once: ${actionName}`);
-    const action = AllActions[actionName];
+    if (!player.actions) {
+        console.error('Player actions are undefined');
+        return;
+    }
+
+    const action = player.actions[actionName];
     if (action) {
         action.reset().fadeIn(0.5).play();
         action.paused = false;
@@ -111,8 +119,8 @@ export function playOnce(actionName) {
         action.loop = THREE.LoopOnce;
 
         action.onFinished = () => {
-            resetAction(actionName);
-            playAction('idle');
+            resetAction(actionName, player.actions);
+            playAction('idle', player);
         };
     } else {
         console.error(`Action not found: ${actionName}`);

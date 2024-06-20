@@ -22,13 +22,14 @@ export async function createPlayer(scene, world) {
             body,
             char_model: model,
             velocity: new THREE.Vector3(),
-            currentAction: 'run'  // Set the default action to 'run'
+            currentAction: 'run',
+            actions // Ensure actions are correctly set here
         };
 
         player.mesh.add(player.char_model);
         scene.add(player.mesh);
 
-        playAction('run');  // Play the default run animation
+        playAction('run', player);  // Play the default run animation
 
         console.log('Player created:', player);
 
@@ -43,12 +44,12 @@ export function updatePlayerState(player, input, camera) {
 
     if (moving) {
         if (player.currentAction !== 'run') {
-            playAction('run');
+            playAction('run', player);
             player.currentAction = 'run';
         }
     } else {
         if (player.currentAction !== 'idle') {
-            playAction('idle');
+            playAction('idle', player);
             player.currentAction = 'idle';
         }
     }
@@ -64,7 +65,7 @@ export function renderBalls(scene, balls) {
 }
 
 export function updateAnimation(deltaTime) {
-    updateMixer(deltaTime);
+    updateMixer(deltaTime, mixer);
 }
 
 export { playAction, playOnce };
