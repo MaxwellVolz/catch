@@ -1,75 +1,44 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
+const socketIo = require('socket.io');
+const { LobbyManager, CharacterManager, BallManager } = require('./managers');
 
 const app = express();
-app.use(cors());
-
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: 'http://localhost:5173',
-        methods: ['GET', 'POST'],
-    }
-});
+const io = socketIo(server);
 
-let players = {};
-let balls = {};
+app.use(express.static('public'));
 
+// Initialize managers for lobby, character, and ball handling
+const lobbyManager = new LobbyManager(io);
+const characterManager = new CharacterManager(io);
+const ballManager = new BallManager(io);
+
+// Setup Socket.io event handling
 io.on('connection', (socket) => {
-    console.log('A player connected: ' + socket.id);
+    console.log('New client connected:', socket.id);
 
-    socket.on('playerUpdate', (data) => {
-        if (!data || !data.id || !data.position || !data.rotation || !data.currentAction) {
-            console.error('Invalid player update data received:', data);
-            return;
-        }
+    // Handle player joining the lobby
+    socket.on('joinLobby', (data) => lobbyManager.handleJoinLobby(socket, data));
 
-        players[socket.id] = data;
-        io.emit('playerUpdate', Object.values(players));
-    });
+    // Handle character state updates
+    socket.on('updateCharacter', (data) => characterManager.handleUpdateCharacter(socket, data));
 
-    socket.on('ballThrown', (data) => {
-        if (!data || !data.id || !data.position || !data.rotation || !data.velocity) {
-            console.error('Invalid ball thrown data received:', data);
-            return;
-        }
+    // Handle ball throwing
+    socket.on('throwBall', (data) => ballManager.handleThrowBall(socket, data));
 
-        balls[data.id] = data;
-        io.emit('ballThrown', data);
-    });
+    // Handle ball catching
+    socket.on('ballCaught', (data) => ballManager.handleBallCaught(socket, data));
 
-    socket.on('ballRemoved', (data) => {
-        if (!data || !data.id) {
-            console.error('Invalid ball removed data received:', data);
-            return;
-        }
-
-        delete balls[data.id];
-        io.emit('ballRemoved', data);
-    });
-
-    socket.on('catchUpdate', (data) => {
-        if (!data || !data.catcherId || !data.catchCount) {
-            console.error('Invalid catch update data received:', data);
-            return;
-        }
-
-        if (players[data.catcherId]) {
-            players[data.catcherId].catchCount = data.catchCount;
-            io.emit('catchUpdate', data);
-        }
-    });
-
+    // Handle player disconnection
     socket.on('disconnect', () => {
-        delete players[socket.id];
-        console.log(`Player disconnected: ${socket.id}`);
-        io.emit('playerDisconnected', { id: socket.id });
-        io.emit('playerUpdate', Object.values(players));
+        console.log('Client disconnected:', socket.id);
+        lobbyManager.handleDisconnect(socket);
+        characterManager.handleDisconnect(socket);
     });
 });
 
+// Start the server
 server.listen(3000, () => {
-    console.log('Server is running on port 3000');
+    console.log('Server listening on port 3000');
 });

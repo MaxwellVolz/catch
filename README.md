@@ -2,7 +2,12 @@
 
 - [Play Catch](#play-catch)
   - [Project Overview](#project-overview)
+  - [Game Architecture](#game-architecture)
+    - [Server-Side Components:](#server-side-components)
+    - [Client-Side Components:](#client-side-components)
   - [Mixamo Model Stuff](#mixamo-model-stuff)
+    - [Data Flow:](#data-flow)
+  - [Server-Side Code](#server-side-code)
     - [Folder Structure](#folder-structure)
   - [Links](#links)
   - [Install](#install)
@@ -38,8 +43,81 @@ Browser-based multiplayer single lobby game
       2. rendered mesh
 
 
+## Game Architecture
 
+### Server-Side Components:
+
+1. **Lobby Manager**: Handles players joining/leaving the lobby.
+1. **Character Manager**: Manages the state of characters (position, name, catchCount).
+1. **Ball Manager**: Handles the creation, movement, and removal of balls.
+1. **Socket.io**: Facilitates real-time communication between server and clients.
+
+### Client-Side Components:
+
+1. **Three.js Scene**: Renders the 3D environment, characters, and balls.
+1. **Physics Engine (Cannon.js)**: Manages physics for characters and balls.
+1. **Socket.io Client**: Handles communication with the server.
+1. **Game Logic**: Manages character movement, ball throwing, and state updates.
 ## Mixamo Model Stuff
+
+### Data Flow:
+
+1. Player Joins:
+  - Client sends joinLobby with player info.
+  - Server updates lobby and broadcasts new player to all clients.
+2. Player Moves:
+  - Client sends updateCharacter with position and state.
+  - Server broadcasts updated character state to all clients.
+3. Ball Thrown:
+  - Client sends throwBall with ball data (position, rotation, velocity).
+  - Server broadcasts ball data to all clients.
+  - Each client creates a local ball instance.
+4. Ball Caught:
+  - Collision detected locally.
+  - Client sends ballCaught event.
+  - Server broadcasts ball removal to all clients.
+5. Player Disconnects:
+  - Server detects disconnect.
+  - Server broadcasts removal of player to all clients.
+
+
+```sh
+                    +---------------------------+
+                    |         Server            |
+                    |                           |
+                    |  +---------------------+  |
+                    |  |   Lobby Manager     |  |
+                    |  +---------------------+  |
+                    |  +---------------------+  |
+                    |  | Character Manager   |  |
+                    |  +---------------------+  |
+                    |  +---------------------+  |
+                    |  |    Ball Manager     |  |
+                    |  +---------------------+  |
+                    |  +---------------------+  |
+                    |  |      Socket.io      |  |
+                    |  +---------------------+  |
+                    +-------------|-------------+
+                                  |
+                 +----------------|------------------+
+                 |                |                  |
++----------------|---------+  +---|--------------+  +-|--------------+
+|     Client 1             |  |     Client 2     |  |     Client 3   |
+| +---------------------+  |  | +--------------+ |  | +--------------+|
+| | Three.js Scene      |  |  | | Three.js Scene| |  | | Three.js Scene|
+| +---------------------+  |  | +--------------+ |  | +--------------+|
+| | Physics Engine      |  |  | | Physics Engine| |  | | Physics Engine|
+| +---------------------+  |  | +--------------+ |  | +--------------+|
+| | Socket.io Client    |  |  | | Socket.io Cl. | |  | | Socket.io Cl. |
+| +---------------------+  |  | +--------------+ |  | +--------------+|
+| | Game Logic          |  |  | | Game Logic   | |  | | Game Logic    |
+| +---------------------+  |  | +--------------+ |  | +--------------+|
++---------------------------+  +------------------+  +-----------------+
+
+```
+
+## Server-Side Code
+
 
 [Converter](https://github.com/vis-prime/BlenderMixamo2glTFConverter)
 ### Folder Structure
